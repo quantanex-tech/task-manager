@@ -1,0 +1,47 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Gradle / Android
+.gradle/
+build/
+**/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+
+# Kotlin / JVM
+*.class
+out/
+
+# Node / web tooling
+node_modules/
+dist/
+coverage/
+
+# Python tooling
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Docker / local data
+.data/
+postgres-data/
+minio-data/
