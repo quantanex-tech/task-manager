@@ -4,7 +4,9 @@ Open-source, privacy-first task manager intended to begin with practical Todoist
 
 ## Current status
 
-This repository has just been created. Product specification and task review are currently managed in Notion; app/server implementation should not begin until the relevant Notion task is moved to `Ready`.
+Product specification and task review are managed in Notion. App/server implementation should only begin when the relevant Notion task is moved to `Ready`.
+
+The first server-side foundation is Docker-first: PostgreSQL, MinIO and a Go + Chi server can be run through Docker Compose. See [`docs/infrastructure.md`](docs/infrastructure.md).
 
 Canonical planning sources:
 
@@ -33,6 +35,23 @@ Canonical planning sources:
 8. Do not mark a task `Done` unless acceptance criteria, tests, docs and delivery requirements are satisfied.
 
 See [`docs/notion-delivery-workflow.md`](docs/notion-delivery-workflow.md).
+
+## Server development quickstart
+
+Prerequisite: Docker with Docker Compose v2.
+
+```bash
+git clone https://github.com/quantanex-tech/task-manager.git
+cd task-manager
+./scripts/dev.sh up
+curl http://127.0.0.1:8080/health/ready
+```
+
+Run the containerised smoke test stack:
+
+```bash
+./scripts/dev.sh test
+```
 
 ## Clone and future Android/WearOS install flow
 
