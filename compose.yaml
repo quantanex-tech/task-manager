@@ -90,6 +90,4 @@ services:
 
 volumes:
   postgres_data:
-    name: task_manager_postgres_data
   minio_data:
-    name: task_manager_minio_data
