@@ -34,6 +34,8 @@ Canonical planning sources:
 
 See [`docs/notion-delivery-workflow.md`](docs/notion-delivery-workflow.md).
 
+The Phase 1 foundation dependency order and implementation gates are recorded in [`docs/phase-1-foundation-dependency-map.md`](docs/phase-1-foundation-dependency-map.md).
+
 ## Clone and future Android/WearOS install flow
 
 From a laptop with Android Platform Tools installed:
