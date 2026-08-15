@@ -4,7 +4,7 @@ Open-source, privacy-first task manager intended to begin with practical Todoist
 
 ## Current status
 
-This repository has just been created. Product specification and task review are currently managed in Notion; app/server implementation should not begin until the relevant Notion task is moved to `Ready`.
+Product specification and task review are managed in Notion. App/server implementation should only begin when the relevant Notion task is moved to `Ready`.
 
 Canonical planning sources:
 
@@ -17,10 +17,27 @@ Canonical planning sources:
 
 - Android and WearOS are the first client targets.
 - Server-side development, test dependencies, hosted deployment and self-hosting are Docker-first.
-- GitHub Actions should provide repeatable validation and release artifacts.
+- GitHub Actions provide repeatable validation and release artifacts as implementation surfaces arrive.
 - End-to-end encryption is mandatory before any usable release stores or syncs real user task data. See [`docs/adr/0001-phase-1-e2ee-mandatory.md`](docs/adr/0001-phase-1-e2ee-mandatory.md).
 - Android/WearOS local persistence is specified as encrypted SQLite behind a replaceable repository boundary. See [`docs/architecture/encrypted-client-persistence.md`](docs/architecture/encrypted-client-persistence.md) and [`docs/adr/0002-encrypted-client-sqlite-persistence.md`](docs/adr/0002-encrypted-client-sqlite-persistence.md).
 - Personal/core usage should remain fully useful for free; commercial value should come from teams/businesses with more than two users.
+
+## Repository layout
+
+The repository is intentionally a monorepo so every production change can be reviewed with its tests, infrastructure, migrations, protocol contracts and ADRs.
+
+| Path | Purpose |
+| --- | --- |
+| `apps/android/` | Future Android phone app, Gradle module and debug/release build outputs. |
+| `apps/wearos/` | Future WearOS companion app, Gradle module and watch install artifacts. |
+| `server/` | Future backend application code and server tests. |
+| `packages/protocol-test-vectors/` | Future encrypted envelope, sync/event and compatibility fixtures. |
+| `infra/docker/` | Future Docker-first local/self-hosted stack, Compose files and persistence notes. |
+| `docs/adr/` | Accepted architecture decision records. ADR-0001 is already committed here. |
+| `docs/product/specs/` | Future reviewed implementation specs copied or linked from Notion. |
+| `.github/` | Pull-request templates, issue templates and CI policy checks. |
+
+Implementation tasks may create these directories when they add real files. Keep deployable code, shared contracts, infrastructure and documentation separated along these boundaries.
 
 ## Development workflow
 
@@ -33,7 +50,17 @@ Canonical planning sources:
 7. Update docs/ADRs in the same PR as code that depends on them.
 8. Do not mark a task `Done` unless acceptance criteria, tests, docs and delivery requirements are satisfied.
 
-See [`docs/notion-delivery-workflow.md`](docs/notion-delivery-workflow.md).
+See [`docs/notion-delivery-workflow.md`](docs/notion-delivery-workflow.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Required checks
+
+Before opening or updating a pull request, run the repository policy smoke check:
+
+```bash
+./scripts/check-repository-policy.sh
+```
+
+As implementation surfaces arrive, add the relevant local commands here and to CI: formatting, linting, server tests, Android/WearOS Gradle builds, Docker Compose validation and secret scanning.
 
 ## Clone and future Android/WearOS install flow
 
@@ -57,7 +84,15 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb -s SERIAL install -r wear/app/build/outputs/apk/debug/wear-debug.apk
 ```
 
-These commands are documented now so implementation tasks can preserve an easy clone/build/install path for Paul’s laptop.
+These commands are documented now so implementation tasks can preserve an easy clone/build/install path for Paul’s laptop. See [`docs/android-adb-install.md`](docs/android-adb-install.md).
+
+## Security and secrets
+
+Do not commit real credentials, production data, signing keys or protected E2EE fixtures. Use local `.env` files, GitHub environments/secrets and sanitized CI logs/artifacts. See [`SECURITY.md`](SECURITY.md).
+
+## Versioning and changelog
+
+Until the first usable release, use `0.0.0`-style pre-release tags only when Paul explicitly asks for an artifact. Once releases begin, maintain [`CHANGELOG.md`](CHANGELOG.md) using Keep a Changelog categories and semantic-version tags (`vMAJOR.MINOR.PATCH`) unless an ADR replaces this policy.
 
 ## License
 
