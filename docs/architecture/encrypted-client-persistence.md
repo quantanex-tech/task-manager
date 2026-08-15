@@ -1,6 +1,6 @@
 # Encrypted client persistence specification
 
-Related ADR: [`ADR-0002`](../adr/0002-encrypted-client-sqlite-persistence.md)  
+Related ADR: [`ADR-0002`](../adr/0002-encrypted-client-sqlite-persistence.md)
 Related Notion task: `3b0319db76c881968a6bd0c84ae84667`
 
 This document specifies the Phase 1 Android/WearOS local persistence layer. It is intentionally narrower than sync, sharing, reminders scheduling, importers or encrypted backup/recovery. It establishes the local source of truth those later features must respect.

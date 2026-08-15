@@ -1,8 +1,8 @@
 # ADR-0002 — Android and WearOS use encrypted SQLite behind a replaceable repository boundary
 
-Status: Proposed  
-Date: 2026-08-05  
-Decision owner: Paul  
+Status: Proposed
+Date: 2026-08-05
+Decision owner: Paul
 Related task: Notion page `3b0319db76c881968a6bd0c84ae84667`
 
 ## Context
