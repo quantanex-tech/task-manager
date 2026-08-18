@@ -2,7 +2,7 @@
 
 Status: working map for Notion task `3b0319db-76c8-8101-9b53-ccb70a146fc0`
 Source of truth: Notion brief, project page, Main Tasks DB, ADR-0001, and repo ADRs
-Last reviewed from Notion: 2026-08-10
+Last reviewed from Notion: 2026-08-18
 
 ## Purpose
 
@@ -15,11 +15,17 @@ ADR-0001 is already accepted: end-to-end encryption is mandatory before any usab
 | State | Phase 1 items |
 | --- | --- |
 | In progress | Parent foundation task; GitHub repository workflow; Docker-first stack; encrypted SQLite persistence architecture |
-| Ready | Drag-and-drop reordering feature |
+| Ready | Groups of lists / Projects; drag-and-drop reordering; repeating notification pings |
 | Todo | Remaining foundation architecture/setup/CI/release tasks and Phase 1 product features |
 | Idea | Due dates/times/duration/deadlines/time zones |
 
-The drag-and-drop task is marked `Ready` in Notion, but its own specification names unresolved security and data-contract questions. It should not be implemented until the metadata boundary, order-key algorithm, hierarchy model, local persistence, sync/conflict policy, and API move contract are resolved.
+Several feature tasks are marked `Ready` in Notion, but implementation is still blocked by unresolved Phase 1 foundations and by the absence of application/client/server scaffolding in `main`:
+
+- Groups of lists / Projects depends on repository/source-control foundation, Docker-first PostgreSQL/server stack, versioned migrations, encrypted entity envelope, device provisioning, encrypted local persistence, offline sync architecture, and the domain hierarchy/key-scope decision path.
+- Drag-and-drop reordering depends on the metadata boundary, order-key algorithm, hierarchy model, local persistence, sync/conflict policy, and API move contract.
+- Repeating notification pings depend on task due/reminder modelling, Android notification foundation, encrypted local persistence, encrypted sync, and privacy metadata boundary; current decisions keep repeat/stop state local per device and avoid server-side repeating wake-up scheduling.
+
+Do not implement these features until their prerequisite foundation tasks are accepted or the feature is split into a deliberately narrower, dependency-free slice with explicit acceptance criteria and tests.
 
 ## Dependency layers
 
