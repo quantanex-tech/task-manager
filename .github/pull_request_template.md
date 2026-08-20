@@ -9,7 +9,7 @@
 
 ## Acceptance criteria covered
 
-- [ ] 
+- [ ]
 
 ## Verification
 
@@ -23,11 +23,13 @@ Commands run:
 
 - [ ] No task content or protected user data is exposed to the server beyond the approved metadata boundary.
 - [ ] Any E2EE-impacting change is covered by the task spec and/or ADR.
+- [ ] Fork/untrusted PR execution cannot access release, deployment or signing secrets.
 
 ## Android / WearOS install impact
 
 - [ ] README or docs updated if clone/build/install commands changed.
 - [ ] Artifacts or Gradle outputs documented where relevant.
+- [ ] ADB install commands remain easy to run from Paul's laptop when app modules exist.
 
 ## Follow-ups
 
