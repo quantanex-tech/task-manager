@@ -45,3 +45,7 @@ __pycache__/
 .data/
 postgres-data/
 minio-data/
+backups/
+
+# Hermes local Notion extracts
+.hermes-notion-*

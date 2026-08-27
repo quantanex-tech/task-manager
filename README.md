@@ -6,6 +6,8 @@ Open-source, privacy-first task manager intended to begin with practical Todoist
 
 Product specification and task review are managed in Notion. App/server implementation should only begin when the relevant Notion task is moved to `Ready`.
 
+The first server-side foundation is Docker-first: PostgreSQL, MinIO and a Go + Chi server can be run through Docker Compose. See [`docs/infrastructure.md`](docs/infrastructure.md).
+
 Canonical planning sources:
 
 - Product brief: Notion page `3b0319db76c8812887fef76b5243cfc4`
@@ -60,6 +62,23 @@ Before opening or updating a pull request, run the repository policy smoke check
 ```
 
 As implementation surfaces arrive, add the relevant local commands here and to CI: formatting, linting, server tests, Android/WearOS Gradle builds, Docker Compose validation and secret scanning.
+
+## Server development quickstart
+
+Prerequisite: Docker with Docker Compose v2.
+
+```bash
+git clone https://github.com/quantanex-tech/task-manager.git
+cd task-manager
+./scripts/dev.sh up
+curl http://127.0.0.1:8080/health/ready
+```
+
+Run the containerised smoke test stack:
+
+```bash
+./scripts/dev.sh test
+```
 
 ## Clone and future Android/WearOS install flow
 
