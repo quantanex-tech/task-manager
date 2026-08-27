@@ -64,6 +64,8 @@ Before opening or updating a pull request, run the repository policy smoke check
 
 As implementation surfaces arrive, add the relevant local commands here and to CI: formatting, linting, server tests, Android/WearOS Gradle builds, Docker Compose validation and secret scanning.
 
+The Phase 1 foundation dependency order and implementation gates are recorded in [`docs/phase-1-foundation-dependency-map.md`](docs/phase-1-foundation-dependency-map.md).
+
 ## Server development quickstart
 
 Prerequisite: Docker with Docker Compose v2.
