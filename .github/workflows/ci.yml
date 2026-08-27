@@ -25,5 +25,8 @@ jobs:
       - name: Validate compose config
         run: docker compose config --quiet
 
+      - name: Run dev script regression tests
+        run: bash scripts/test-dev.sh
+
       - name: Build and run smoke test stack
         run: ./scripts/dev.sh test

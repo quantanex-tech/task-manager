@@ -34,8 +34,20 @@ case "${1:-help}" in
   test)
     ensure_env
     TEST_PROJECT="${COMPOSE_PROJECT_NAME:-task-manager}-test"
+    set +e
     docker compose -p "$TEST_PROJECT" --profile test up --build --abort-on-container-exit --exit-code-from smoke smoke
+    smoke_status=$?
     docker compose -p "$TEST_PROJECT" --profile test down -v --remove-orphans
+    cleanup_status=$?
+    set -e
+
+    if [[ "$cleanup_status" -ne 0 ]]; then
+      echo "Smoke test cleanup failed with status $cleanup_status." >&2
+      if [[ "$smoke_status" -eq 0 ]]; then
+        exit "$cleanup_status"
+      fi
+    fi
+    exit "$smoke_status"
     ;;
   down)
     "${COMPOSE[@]}" down --remove-orphans
