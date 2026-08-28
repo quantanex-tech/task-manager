@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/quantanex-tech/task-manager/testdata/e2ee/v1/schema.json",
+  "title": "Task Manager E2EE protocol v1 deterministic vector",
+  "description": "Stable schema for synthetic encrypted-envelope vectors. The in-repo validator is the normative executable check; this file documents the cross-platform JSON shape.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["schema_version", "scenario", "description", "expected_result", "envelope"],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {"const": "task-manager-e2ee-vector-v1"},
+      "scenario": {
+        "enum": [
+          "success",
+          "wrong_key",
+          "wrong_aad",
+          "tamper_ciphertext",
+          "wrong_space",
+          "wrong_entity_id",
+          "wrong_entity_type",
+          "wrong_version",
+          "replay_rollback_marker",
+          "duplicate_nonce_prevention",
+          "rotated_key",
+          "unsupported_version",
+          "deprecated_version"
+        ]
+      },
+      "description": {"type": "string", "minLength": 1},
+      "expected_result": {
+        "enum": [
+          "decrypt_ok",
+          "decrypt_reject_wrong_key",
+          "decrypt_reject_wrong_aad",
+          "decrypt_reject_tamper",
+          "decrypt_reject_wrong_space",
+          "decrypt_reject_wrong_entity_id",
+          "decrypt_reject_wrong_entity_type",
+          "decrypt_reject_wrong_version",
+          "sync_reject_replay_rollback",
+          "encrypt_reject_duplicate_nonce",
+          "decrypt_ok_rotated_key",
+          "reject_unsupported_version",
+          "reject_deprecated_version"
+        ]
+      },
+      "envelope": {
+        "type": "object",
+        "required": ["protocol_version", "suite_id", "space_id", "entity_type", "entity_id", "entity_version", "key_epoch", "content_key_id", "nonce", "aad", "ciphertext", "ciphertext_sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "protocol_version": {"const": 1},
+          "suite_id": {"const": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256"},
+          "space_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,79}$"},
+          "entity_type": {"enum": ["task", "project", "label", "comment", "attachment", "tombstone"]},
+          "entity_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,79}$"},
+          "entity_version": {"type": "integer", "minimum": 1},
+          "key_epoch": {"type": "integer", "minimum": 1},
+          "content_key_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,79}$"},
+          "nonce": {"type": "string", "pattern": "^[0-9a-f]{48}$"},
+          "aad": {
+            "type": "object",
+            "required": ["canonical_json_sha256"],
+            "additionalProperties": false,
+            "properties": {
+              "canonical_json_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
+          "ciphertext": {"type": "string", "pattern": "^[0-9a-f]+$"},
+          "ciphertext_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      },
+      "attachment": {
+        "type": "object",
+        "required": ["chunk_index", "chunk_count", "chunk_size_bytes", "plaintext_size_bytes", "plaintext_sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "chunk_index": {"type": "integer", "minimum": 0},
+          "chunk_count": {"type": "integer", "minimum": 1},
+          "chunk_size_bytes": {"type": "integer", "minimum": 1},
+          "plaintext_size_bytes": {"type": "integer", "minimum": 0},
+          "plaintext_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

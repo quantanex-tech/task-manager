@@ -1,0 +1,269 @@
+[
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "success",
+    "description": "Synthetic task decrypts with the declared content key, AAD, nonce and protocol version.",
+    "expected_result": "decrypt_ok",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_success",
+      "entity_version": 1,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "00112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "27f0fb2b19ff260ea42a940ec55158a09ee6a0f2deba29c97d28859d425bb2fb"},
+      "ciphertext": "39e7f634f05a6409a52325df97e617d3c628ee41da9d05d5bbfcb6d3178ba05f",
+      "ciphertext_sha256": "7b6650304128cf655f4f9b1b3d420ab893939a7e32183f12a1e76c03356dc876"
+    },
+    "attachment": {
+      "chunk_index": 0,
+      "chunk_count": 2,
+      "chunk_size_bytes": 1048576,
+      "plaintext_size_bytes": 1536000,
+      "plaintext_sha256": "8f72e1be70768d39ab04d16f3c231ed8a65caf8a5094f4dd275cc91e52bf48f2"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_key",
+    "description": "Decrypting with a different content key identifier must fail authentication.",
+    "expected_result": "decrypt_reject_wrong_key",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_wrong_key",
+      "entity_version": 2,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "10112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "3e7a24f8afdaf4a6edc046a27c9ce21ac318e7788a69684319fb1628a3a57c17"},
+      "ciphertext": "4b1276b61187d23e9fef8c06ec1906c0bfeaa104565183aeff31e66c6d8967d8",
+      "ciphertext_sha256": "95a76a2b704739af1c41c16cc0fcb0edddc28a14ea0b4c3a080cb35dbe9e6eca"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_aad",
+    "description": "Changing canonical associated data must fail authentication.",
+    "expected_result": "decrypt_reject_wrong_aad",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_wrong_aad",
+      "entity_version": 3,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "20112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "ciphertext": "6b7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "8699c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "tamper_ciphertext",
+    "description": "A flipped ciphertext bit must fail authentication before plaintext is released.",
+    "expected_result": "decrypt_reject_tamper",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_tamper_ciphertext",
+      "entity_version": 4,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "30112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "4b06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "fb7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "1239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_space",
+    "description": "Rebinding the envelope to a different space must fail because space_id is AAD.",
+    "expected_result": "decrypt_reject_wrong_space",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_beta",
+      "entity_type": "task",
+      "entity_id": "ent_wrong_space",
+      "entity_version": 5,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "40112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "5f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "8f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "2239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_entity_id",
+    "description": "Rebinding the envelope to a different entity id must fail because entity_id is AAD.",
+    "expected_result": "decrypt_reject_wrong_entity_id",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_wrong_entity_id",
+      "entity_version": 6,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "50112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "6f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "9f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "3239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_entity_type",
+    "description": "Rebinding task ciphertext as another entity type must fail because entity_type is AAD.",
+    "expected_result": "decrypt_reject_wrong_entity_type",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "comment",
+      "entity_id": "ent_wrong_entity_type",
+      "entity_version": 7,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "60112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "7f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "af7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "4239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "wrong_version",
+    "description": "Rebinding ciphertext to a different entity version must fail because entity_version is AAD.",
+    "expected_result": "decrypt_reject_wrong_version",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_wrong_version",
+      "entity_version": 8,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "70112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "8f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "bf7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "5239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "replay_rollback_marker",
+    "description": "A valid older envelope below the stored server sequence/entity version marker must be rejected as rollback.",
+    "expected_result": "sync_reject_replay_rollback",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_replay_rollback_marker",
+      "entity_version": 4,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "80112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "9f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "cf7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "6239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "duplicate_nonce_prevention",
+    "description": "Clients must reject local encryption when a nonce is already reserved for this content key epoch.",
+    "expected_result": "encrypt_reject_duplicate_nonce",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_duplicate_nonce_prevention",
+      "entity_version": 9,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "90112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "0f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "df7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "7239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "rotated_key",
+    "description": "Ciphertext written after rotation decrypts only with the new key epoch and key id.",
+    "expected_result": "decrypt_ok_rotated_key",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_rotated_key",
+      "entity_version": 10,
+      "key_epoch": 2,
+      "content_key_id": "ck_space_alpha_epoch_2",
+      "nonce": "a0112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "1f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "ef7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "8239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "unsupported_version",
+    "description": "Protocol versions greater than the implementation supports must fail closed.",
+    "expected_result": "reject_unsupported_version",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_unsupported_version",
+      "entity_version": 11,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "b0112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "2f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "0f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "9239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  },
+  {
+    "schema_version": "task-manager-e2ee-vector-v1",
+    "scenario": "deprecated_version",
+    "description": "Protocol versions explicitly deprecated by policy must fail closed even if parsable.",
+    "expected_result": "reject_deprecated_version",
+    "envelope": {
+      "protocol_version": 1,
+      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
+      "space_id": "sp_alpha",
+      "entity_type": "task",
+      "entity_id": "ent_deprecated_version",
+      "entity_version": 12,
+      "key_epoch": 1,
+      "content_key_id": "ck_space_alpha_epoch_1",
+      "nonce": "c0112233445566778899aabbccddeeff0011223344556677",
+      "aad": {"canonical_json_sha256": "3f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "ciphertext": "1f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
+      "ciphertext_sha256": "a239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+    }
+  }
+]

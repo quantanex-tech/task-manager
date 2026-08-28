@@ -8,7 +8,7 @@ Last reviewed from Notion: 2026-08-27
 
 Phase 1 must establish the technical foundation before product features start depending on unstable security, storage, sync, API, or release assumptions. This map records the safe implementation order and the readiness gates that future agents and contributors must check before moving child tasks to `Ready` or writing code.
 
-ADR-0001 is already accepted: end-to-end encryption is mandatory before any usable release stores or syncs real task data. Any task whose data contract changes with E2EE, offline sync, or server-visible metadata decisions is blocked until those decisions are accepted.
+ADR-0001 is already accepted: end-to-end encryption is mandatory before any usable release stores or syncs real task data. ADR-0003 is accepted for the Phase 1 privacy threat model and metadata boundary. ADR-0004 is proposed for the E2EE protocol and encrypted entity envelope; downstream implementation remains blocked until that decision is independently reviewed and accepted.
 
 ## Backlog state at review time
 
@@ -55,11 +55,11 @@ Blocked downstream work includes task/list APIs, encrypted object storage, sync,
 
 Required before usable client persistence or sync:
 
-- Specify the E2EE protocol and encrypted entity envelope.
+- Specify the E2EE protocol and encrypted entity envelope. Proposed ADR-0004 and `docs/e2ee-protocol-v1.md` define the candidate v1 protocol, envelope and deterministic vectors, but they are not accepted until the separate review/human acceptance gate completes.
 - Design device identity, provisioning, secure key storage, recovery, key backup, sharing, membership changes, revocation, and key rotation.
 - Produce versioned protocol fixtures that future Android, WearOS, server, and other clients can reuse.
 
-Downstream code must not invent encryption envelope fields, key identifiers, recovery semantics, or sharing behaviour without these decisions.
+Downstream code must not invent encryption envelope fields, key identifiers, recovery semantics, or sharing behaviour without these decisions. Device provisioning, recovery, encrypted key backup, sharing, revocation and production implementation remain explicit deferred gates.
 
 ### 3. Client storage and offline model
 
