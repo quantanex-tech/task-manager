@@ -51,7 +51,7 @@ The following remain encrypted and must not appear in plaintext server payloads,
 - reminder details, recurrence expressions, search terms, attachment filenames/previews, and plaintext attachment hashes;
 - content keys, database keys, wrapped-key plaintext, recovery secrets, and decrypted sync keys.
 
-Encrypted operation envelopes must preserve ADR-0004 AEAD associated-data binding for protocol version, suite ID, space ID, entity ID or operation target identifier where applicable, version/generation, key epoch, content-key ID, and canonical payload hash. Clients must reject replay, rollback, wrong-space, wrong-entity, wrong-version, wrong-key, tamper, substitution, unsupported-version, and deprecated-version cases before plaintext is exposed.
+Encrypted operation envelopes must preserve ADR-0004 replay, rollback, and substitution controls without moving protected operation metadata into the outer envelope. Visible AEAD associated data is limited to approved non-leaking metadata such as protocol version, suite ID, envelope version, opaque `space_id`, opaque `op_id`, actor device ID, key epoch, content-key ID, and a canonical ciphertext or encrypted-payload hash. Entity identifiers, generations, entity types, operation kinds/targets, semantic field names, causal context, client timestamps, and tombstones remain inside encrypted payloads and are authenticated either by the encrypted payload itself or through a non-leaking canonical payload/ciphertext hash. Clients must reject replay, rollback, wrong-space, wrong-entity, wrong-version, wrong-key, tamper, substitution, unsupported-version, and deprecated-version cases before plaintext is exposed.
 
 Phase 1 diagnostics remain local-only. Logs and errors may include opaque IDs, request IDs, server sequences, redacted counts, capability categories, and typed error categories only. They must not include decrypted content, semantic field names, user-authored names, filenames, search strings, reminder details, recurrence expressions, or key material.
 
@@ -66,7 +66,7 @@ Future implementations must preserve these invariants before claiming compatibil
 5. Client-side convergence: clients with the same authorised key material and complete ordered operation history converge to the same decrypted state without server-readable semantics.
 6. Field-level merge: independent fields merge; same-field concurrency uses the deterministic server-sequence tie-break; reviewable losing material-text values are retained for future user-facing resolution.
 7. Delete/restore generations: delete wins within a generation; restore creates the next generation; the highest deleted generation survives compaction and blocks stale resurrection.
-8. Replay and substitution rejection: ADR-0004 AAD/version/key bindings prevent rebinding ciphertext across spaces, entities, versions, operations, generations, key epochs, or protocol suites.
+8. Replay and substitution rejection: ADR-0004-compatible envelope bindings and encrypted payload authentication prevent rebinding ciphertext across visible spaces, operations, devices, key epochs, or protocol suites, and across encrypted entities, versions, generations, operation kinds/targets, causal context, or tombstones, without exposing those protected values as plaintext outer metadata.
 9. Revocation boundary: device/member revocation stops future sync authorisation and key delivery. It cannot erase content already decrypted, copied, exported, screenshotted, cached, or retained by a previously authorised client or human.
 10. Key rotation: new writes after rotation use the new key epoch/content-key ID. Old epochs remain readable only for authorised clients that still need replay or migration. Revocation-sensitive data may require client re-encryption under a later sharing/revocation design.
 11. Snapshots and compaction: snapshots are client-authored and encrypted. Operation-tail compaction must not break clients that need full replay, older snapshots, old key epochs, or protocol migration handling.
@@ -86,7 +86,7 @@ This ADR does not add executable tests and does not claim any sync implementatio
 - same-field deterministic tie-break with retained reviewable losing material-text values;
 - delete-wins and explicit restore into the next generation;
 - stale operation replay after delete and after compaction grace;
-- AEAD/AAD rejection for wrong space, entity, operation target, version, generation, key epoch, content-key ID, suite, or canonical payload hash;
+- rejection when visible AAD is rebound to the wrong space, operation ID, actor device, protocol/envelope version, key epoch, content-key ID, suite, or canonical ciphertext/payload hash, and when encrypted payload authentication detects the wrong entity identifier, operation kind/target, version, generation, causal context, or tombstone;
 - rollback/replay rejection below highest accepted server sequence and entity/generation markers;
 - revocation blocking future sync/key delivery while documenting the inability to claw back already decrypted content;
 - key rotation replay across old and new epochs for authorised clients;
