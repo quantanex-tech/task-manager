@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import pathlib
 import tempfile
@@ -8,6 +9,23 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VALIDATOR_PATH = ROOT / "scripts" / "validate-e2ee-vectors.py"
 VECTOR_DIR = ROOT / "testdata" / "e2ee" / "v1"
+VECTOR_PATH = VECTOR_DIR / "vectors.json"
+
+
+def canonical_json_bytes(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+def aad_document(envelope):
+    return {
+        "protocol_version": envelope["protocol_version"],
+        "suite_id": envelope["suite_id"],
+        "space_id": envelope["space_id"],
+        "entity_id": envelope["entity_id"],
+        "entity_version": envelope["entity_version"],
+        "key_epoch": envelope["key_epoch"],
+        "content_key_id": envelope["content_key_id"],
+    }
 
 
 def load_validator():
@@ -18,6 +36,31 @@ def load_validator():
 
 
 class E2EEVectorValidationTests(unittest.TestCase):
+    def test_server_visible_envelope_has_no_protected_object_type(self):
+        vectors = json.loads(VECTOR_PATH.read_text(encoding="utf-8"))
+        schema = json.loads((VECTOR_DIR / "schema.json").read_text(encoding="utf-8"))
+
+        for vector in vectors:
+            self.assertNotIn("entity_type", vector["envelope"], vector["scenario"])
+        self.assertNotIn("entity_type", json.dumps(schema))
+
+    def test_repository_vectors_have_recomputed_hashes(self):
+        vectors = json.loads(VECTOR_PATH.read_text(encoding="utf-8"))
+
+        for vector in vectors:
+            envelope = vector["envelope"]
+            expected_aad_hash = hashlib.sha256(canonical_json_bytes(aad_document(envelope))).hexdigest()
+            expected_ciphertext_hash = hashlib.sha256(bytes.fromhex(envelope["ciphertext"])).hexdigest()
+
+            self.assertEqual(expected_aad_hash, envelope["aad"]["canonical_json_sha256"], vector["scenario"])
+            self.assertEqual(expected_ciphertext_hash, envelope["ciphertext_sha256"], vector["scenario"])
+
+    def test_version_rejection_scenarios_keep_actual_protocol_versions(self):
+        vectors = {vector["scenario"]: vector for vector in json.loads(VECTOR_PATH.read_text(encoding="utf-8"))}
+
+        self.assertGreater(vectors["unsupported_version"]["envelope"]["protocol_version"], 1)
+        self.assertEqual(0, vectors["deprecated_version"]["envelope"]["protocol_version"])
+
     def test_repository_vectors_validate_against_stable_schema(self):
         validator = load_validator()
 
@@ -32,7 +75,6 @@ class E2EEVectorValidationTests(unittest.TestCase):
                 "tamper_ciphertext",
                 "wrong_space",
                 "wrong_entity_id",
-                "wrong_entity_type",
                 "wrong_version",
                 "replay_rollback_marker",
                 "duplicate_nonce_prevention",
@@ -55,7 +97,6 @@ class E2EEVectorValidationTests(unittest.TestCase):
                     "protocol_version": 1,
                     "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
                     "space_id": "sp_test",
-                    "entity_type": "task",
                     "entity_id": "ent_a",
                     "entity_version": 7,
                     "key_epoch": 3,
@@ -75,7 +116,6 @@ class E2EEVectorValidationTests(unittest.TestCase):
                     "protocol_version": 1,
                     "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
                     "space_id": "sp_test",
-                    "entity_type": "comment",
                     "entity_id": "ent_b",
                     "entity_version": 1,
                     "key_epoch": 3,

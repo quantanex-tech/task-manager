@@ -54,7 +54,6 @@ Server-visible fields in v1 envelopes:
 - `suite_id`
 - `space_id`
 - `entity_id`
-- `entity_type` from the fixed protocol enum only (`task`, `project`, `label`, `comment`, `attachment`, `tombstone`)
 - `entity_version`
 - `key_epoch`
 - `content_key_id`
@@ -62,10 +61,10 @@ Server-visible fields in v1 envelopes:
 - `aad.canonical_json_sha256`
 - `ciphertext`
 - `ciphertext_sha256`
-- attachment chunk routing fields when entity type is `attachment`
+- opaque attachment chunk routing fields outside the entity envelope when blob storage is required
 - server-assigned sequence, storage location, length, created/updated/deleted timestamps and operational audit IDs outside the cryptographic envelope
 
-The enum is not permission for the server to infer user semantics beyond routing/storage; ADR-0003 still forbids plaintext priority, due-date presence, completion state, reminder existence, names, comments, recurrence expressions, search terms, attachment names/previews and decrypted content.
+The envelope does not expose plaintext object type. ADR-0003 forbids plaintext task/list/project/label/comment/reminder semantics, object type, priority, due-date presence, completion state, reminder existence, names, comments, recurrence expressions, search terms, attachment names/previews and decrypted content.
 
 ## 5. Key hierarchy
 
@@ -86,14 +85,14 @@ HKDF derivation for entity AEAD keys:
 
 - Input key material: `space_content_key`.
 - Salt: `sha256("task-manager:e2ee:v1:space:" || space_id || ":epoch:" || decimal(key_epoch))`.
-- Info: `"task-manager:e2ee:v1:entity-aead:" || suite_id || ":" || entity_type`.
+- Info: `"task-manager:e2ee:v1:entity-aead:" || suite_id`.
 - Output length: 32 bytes.
 
 ### 5.3 Attachment keys
 
 Attachments use a random 32-byte attachment data key per attachment object. The attachment data key is wrapped by the active space content key using XChaCha20-Poly1305 with AAD binding the attachment ID, key epoch and wrapping purpose.
 
-Rationale: attachments are large, chunked, resumable and more likely to need independent retention or future selective sharing. Normal task/project/list/label/comment entities do not get per-entity data keys in v1 because that would add wrapping metadata and write amplification without a Phase 1 selective-sharing requirement.
+Rationale: attachments are large, chunked, resumable and more likely to need independent retention or future selective sharing. Normal small encrypted objects do not get per-object data keys in v1 because that would add wrapping metadata and write amplification without a Phase 1 selective-sharing requirement.
 
 ## 6. Nonce allocation
 
@@ -114,7 +113,6 @@ Build the AAD document with exactly these fields and canonicalize it with RFC 87
   "protocol_version": 1,
   "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
   "space_id": "sp_alpha",
-  "entity_type": "task",
   "entity_id": "ent_example",
   "entity_version": 1,
   "key_epoch": 1,
@@ -124,7 +122,7 @@ Build the AAD document with exactly these fields and canonicalize it with RFC 87
 
 The AEAD AAD bytes are the canonical UTF-8 JSON bytes, not the SHA-256 string. `aad.canonical_json_sha256` is stored for deterministic validation, indexing and cross-platform debugging.
 
-Any change to space ID, entity type, entity ID, entity version, key epoch, content key ID, protocol version or suite ID must produce AEAD authentication failure.
+Any change to space ID, entity ID, entity version, key epoch, content key ID, protocol version or suite ID must produce AEAD authentication failure.
 
 ## 8. Encrypted entity envelope
 
@@ -135,7 +133,6 @@ Normative logical shape:
   "protocol_version": 1,
   "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
   "space_id": "sp_alpha",
-  "entity_type": "task",
   "entity_id": "ent_success",
   "entity_version": 1,
   "key_epoch": 1,
@@ -188,7 +185,7 @@ Clients maintain durable encrypted local markers:
 - accepted tombstone marker per entity;
 - nonce reservation ledger per `(content_key_id, key_epoch)`.
 
-A valid older envelope below the local sequence/entity marker is a rollback attempt and must fail closed with `sync_reject_replay_rollback`. Rebinding ciphertext to another space, entity, entity type or version must fail AEAD authentication. Replaying an identical already-accepted envelope is idempotent only if server sequence and entity version match the local accepted record exactly.
+A valid older envelope below the local sequence/entity marker is a rollback attempt and must fail closed with `sync_reject_replay_rollback`. Rebinding ciphertext to another space, entity ID or version must fail AEAD authentication. Replaying an identical already-accepted envelope is idempotent only if server sequence and entity version match the local accepted record exactly.
 
 ## 12. Rotation and migration
 
@@ -213,7 +210,6 @@ Implementations should expose typed categories without plaintext content:
 - `decrypt_reject_tamper`
 - `decrypt_reject_wrong_space`
 - `decrypt_reject_wrong_entity_id`
-- `decrypt_reject_wrong_entity_type`
 - `decrypt_reject_wrong_version`
 - `sync_reject_replay_rollback`
 - `encrypt_reject_duplicate_nonce`
@@ -228,7 +224,7 @@ Logs and server responses may include only these categories, opaque request/obje
 Committed vectors live under `testdata/e2ee/v1/`:
 
 - `schema.json` documents the stable JSON shape.
-- `vectors.json` contains deterministic synthetic vectors for success, wrong key/AAD, tamper, wrong space/entity/type/version, replay/rollback marker, duplicate nonce prevention, rotated key, unsupported version and deprecated version.
+- `vectors.json` contains deterministic synthetic vectors for success, wrong key/AAD, tamper, wrong space/entity ID/version, replay/rollback marker, duplicate nonce prevention, rotated key, unsupported version and deprecated version.
 - `scripts/validate-e2ee-vectors.py` validates the schema subset and required scenario coverage using only Python's standard library.
 
 The vectors are synthetic and safe to commit. They do not contain real user data, real secrets or production key material. Future implementation tasks must add true cryptographic round-trip vectors generated from audited libraries while preserving the v1 schema compatibility contract.

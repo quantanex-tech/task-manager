@@ -33,7 +33,7 @@ Library strategy:
 - Go server and contract-test code use `golang.org/x/crypto/chacha20poly1305` for XChaCha20-Poly1305, `crypto/hkdf` or the Go 1.23 equivalent for HKDF-SHA-256, `crypto/sha256`, and a reviewed JCS implementation or in-repo conformance tests before accepting envelopes.
 - Future clients must use audited libraries exposing the same XChaCha20-Poly1305, HKDF-SHA-256, SHA-256 and JCS behaviours. They must validate the committed vectors before joining sync.
 
-Use one active content key per space epoch as the baseline for normal task/project/list/label/comment/tombstone entities. Do not add envelope-wrapped per-entity data keys for every small entity in Phase 1. This keeps writes small, simplifies offline sync, reduces wrapping metadata and matches the expected personal/small-team workload. Each envelope records `content_key_id` and `key_epoch`; clients derive operation-specific AEAD subkeys from the space content key using HKDF context, so nonce uniqueness is enforced per derived content-key epoch.
+Use one active content key per space epoch as the baseline for normal encrypted objects. Do not add envelope-wrapped per-object data keys for every small object in Phase 1. This keeps writes small, simplifies offline sync, reduces wrapping metadata and matches the expected personal/small-team workload. Each envelope records `content_key_id` and `key_epoch`; clients derive operation-specific AEAD subkeys from the space content key using HKDF context, so nonce uniqueness is enforced per derived content-key epoch.
 
 Require separate encrypted attachment keys for attachment blobs. Each attachment has an attachment data key wrapped by the current space content key, because attachments have larger blast radius, chunked upload/resume needs independent manifests, and future selective sharing or retention can rotate attachment material without rewriting every task entity.
 
@@ -46,11 +46,11 @@ The server may store and sequence only ADR-0003-allowed operational metadata plu
 - opaque `space_id`, opaque `entity_id`, `key_epoch`, `content_key_id`, protocol/suite/version IDs, ciphertext length/hash, server sequence, timestamps, tombstone/storage lifecycle markers and object-storage locations;
 - encrypted object bytes and encrypted attachment chunks.
 
-The server must not receive plaintext protected fields named in ADR-0003: task/list/project/label/comment/reminder/recurrence/search content; object type semantics beyond the protocol envelope's opaque allowed enum; priority; due-date presence; completion state; coarse reminder existence; attachment names/previews; or content keys. API, logs, metrics, errors, support exports and CI fixtures must use only opaque IDs and typed error categories.
+The server must not receive plaintext protected fields named in ADR-0003: task/list/project/label/comment/reminder/recurrence/search content; object type semantics; priority; due-date presence; completion state; coarse reminder existence; attachment names/previews; or content keys. API, logs, metrics, errors, support exports and CI fixtures must use only opaque IDs and typed error categories.
 
 ## Replay, rollback and substitution controls
 
-The envelope authenticates protocol version, suite ID, space ID, entity type, entity ID, entity version, key epoch, content-key ID and canonical payload hash as AEAD associated data. Clients must reject ciphertext if any of those values are rebound to another space/entity/type/version or key epoch.
+The envelope authenticates protocol version, suite ID, space ID, entity ID, entity version, key epoch, content-key ID and canonical payload hash as AEAD associated data. Clients must reject ciphertext if any of those values are rebound to another space/entity/version or key epoch.
 
 Clients maintain the highest accepted server sequence and entity version per space/entity. A syntactically valid envelope below those markers is treated as rollback/replay and rejected before plaintext is exposed. Servers sequence envelopes monotonically but are not trusted to decide semantic freshness; clients verify markers after sync and fail closed on gaps, rewinds or duplicate nonces.
 
@@ -88,7 +88,7 @@ Per-space keys are acceptable for Phase 1 because selective sharing is deferred 
 1. Implementations must reject unsupported, deprecated or unknown `protocol_version`/`suite_id` before decrypting.
 2. Implementations must use audited library primitives exactly matching the suite; no custom ciphers, MACs, KDFs, nonce derivations or canonicalizers.
 3. Clients must reserve a nonce before encrypting and persist the reservation with the pending outbox write so retries never reuse a nonce with the same derived content key.
-4. Clients must authenticate all envelope identity/version/key fields as associated data and reject wrong key, AAD, tamper, wrong space/entity/type/version and rollback cases without releasing plaintext.
+4. Clients must authenticate all envelope identity/version/key fields as associated data and reject wrong key, AAD, tamper, wrong space/entity/version and rollback cases without releasing plaintext.
 5. Servers must validate only envelope shape, authorisation, size limits, quotas and sequence rules that do not require decrypted content.
 6. Android, WearOS, Go server contract tests and future clients must pass `testdata/e2ee/v1/` vectors before they can claim v1 compatibility.
 7. Future recovery, device provisioning, sharing, revocation and selective-sharing tasks must preserve ADR-0003's server-visible metadata boundary unless a new accepted ADR supersedes it.

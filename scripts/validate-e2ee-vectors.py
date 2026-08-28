@@ -9,6 +9,7 @@ fixture checks without Docker or heavyweight tooling.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -16,8 +17,9 @@ import sys
 from typing import Any
 
 SCHEMA_VERSION = "task-manager-e2ee-vector-v1"
+SUPPORTED_PROTOCOL_VERSION = 1
+DEPRECATED_PROTOCOL_VERSIONS = {0}
 SUITE_ID = "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256"
-ALLOWED_ENTITY_TYPES = {"task", "project", "label", "comment", "attachment", "tombstone"}
 ALLOWED_EXPECTED_RESULTS = {
     "decrypt_ok",
     "decrypt_reject_wrong_key",
@@ -25,7 +27,6 @@ ALLOWED_EXPECTED_RESULTS = {
     "decrypt_reject_tamper",
     "decrypt_reject_wrong_space",
     "decrypt_reject_wrong_entity_id",
-    "decrypt_reject_wrong_entity_type",
     "decrypt_reject_wrong_version",
     "sync_reject_replay_rollback",
     "encrypt_reject_duplicate_nonce",
@@ -40,7 +41,6 @@ REQUIRED_SCENARIOS = {
     "tamper_ciphertext",
     "wrong_space",
     "wrong_entity_id",
-    "wrong_entity_type",
     "wrong_version",
     "replay_rollback_marker",
     "duplicate_nonce_prevention",
@@ -82,6 +82,48 @@ def _validate_string(value: Any, pattern: re.Pattern[str], errors: list[str], fi
     _require(isinstance(value, str) and bool(pattern.fullmatch(value)), errors, f"{field} must match {pattern.pattern}")
 
 
+def canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+def aad_document(envelope: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "protocol_version": envelope.get("protocol_version"),
+        "suite_id": envelope.get("suite_id"),
+        "space_id": envelope.get("space_id"),
+        "entity_id": envelope.get("entity_id"),
+        "entity_version": envelope.get("entity_version"),
+        "key_epoch": envelope.get("key_epoch"),
+        "content_key_id": envelope.get("content_key_id"),
+    }
+
+
+def _validate_protocol_version(envelope: dict[str, Any], expected_result: Any, errors: list[str], prefix: str) -> bool:
+    protocol_version = envelope.get("protocol_version")
+    if not isinstance(protocol_version, int):
+        errors.append(f"{prefix}.envelope.protocol_version must be an integer")
+        return False
+    if protocol_version in DEPRECATED_PROTOCOL_VERSIONS:
+        _require(expected_result == "reject_deprecated_version", errors, f"{prefix} deprecated protocol version must expect reject_deprecated_version")
+        return False
+    if protocol_version != SUPPORTED_PROTOCOL_VERSION:
+        _require(protocol_version > SUPPORTED_PROTOCOL_VERSION, errors, f"{prefix}.envelope.protocol_version must be supported, deprecated, or future unsupported")
+        _require(expected_result == "reject_unsupported_version", errors, f"{prefix} unsupported protocol version must expect reject_unsupported_version")
+        return False
+    return True
+
+
+def _validate_hashes(envelope: dict[str, Any], errors: list[str], prefix: str) -> None:
+    aad = envelope.get("aad")
+    if isinstance(aad, dict) and isinstance(aad.get("canonical_json_sha256"), str):
+        expected_aad_hash = hashlib.sha256(canonical_json_bytes(aad_document(envelope))).hexdigest()
+        _require(aad["canonical_json_sha256"] == expected_aad_hash, errors, f"{prefix}.envelope.aad.canonical_json_sha256 does not match canonical AAD bytes")
+    ciphertext = envelope.get("ciphertext")
+    if isinstance(ciphertext, str) and _is_hex(ciphertext, min_len=2) and isinstance(envelope.get("ciphertext_sha256"), str):
+        expected_ciphertext_hash = hashlib.sha256(bytes.fromhex(ciphertext)).hexdigest()
+        _require(envelope["ciphertext_sha256"] == expected_ciphertext_hash, errors, f"{prefix}.envelope.ciphertext_sha256 does not match ciphertext bytes")
+
+
 def _validate_vector(vector: Any, index: int, errors: list[str]) -> str | None:
     if not isinstance(vector, dict):
         errors.append(f"vector[{index}] must be an object")
@@ -99,10 +141,9 @@ def _validate_vector(vector: Any, index: int, errors: list[str]) -> str | None:
         errors.append(f"{prefix}.envelope must be an object")
         return scenario if isinstance(scenario, str) else None
 
-    _require(envelope.get("protocol_version") == 1, errors, f"{prefix}.envelope.protocol_version must be 1")
+    supported_protocol = _validate_protocol_version(envelope, vector.get("expected_result"), errors, prefix)
     _require(envelope.get("suite_id") == SUITE_ID, errors, f"{prefix}.envelope.suite_id must be {SUITE_ID}")
     _validate_string(envelope.get("space_id"), OPAQUE_ID_RE, errors, f"{prefix}.envelope.space_id")
-    _require(envelope.get("entity_type") in ALLOWED_ENTITY_TYPES, errors, f"{prefix}.envelope.entity_type is not allowed")
     _validate_string(envelope.get("entity_id"), OPAQUE_ID_RE, errors, f"{prefix}.envelope.entity_id")
     _require(isinstance(envelope.get("entity_version"), int) and envelope["entity_version"] >= 1, errors, f"{prefix}.envelope.entity_version must be >= 1")
     _require(isinstance(envelope.get("key_epoch"), int) and envelope["key_epoch"] >= 1, errors, f"{prefix}.envelope.key_epoch must be >= 1")
@@ -116,6 +157,10 @@ def _validate_vector(vector: Any, index: int, errors: list[str]) -> str | None:
         errors.append(f"{prefix}.envelope.aad must be an object")
     else:
         _require(isinstance(aad.get("canonical_json_sha256"), str) and bool(SHA256_HEX_RE.fullmatch(aad["canonical_json_sha256"])), errors, f"{prefix}.envelope.aad.canonical_json_sha256 must be 32 bytes lowercase hex")
+    _validate_hashes(envelope, errors, prefix)
+
+    if not supported_protocol:
+        return scenario if isinstance(scenario, str) else None
 
     attachment = vector.get("attachment")
     if attachment is not None:

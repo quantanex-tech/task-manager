@@ -8,15 +8,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_success",
       "entity_version": 1,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "00112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "27f0fb2b19ff260ea42a940ec55158a09ee6a0f2deba29c97d28859d425bb2fb"},
+      "aad": {
+        "canonical_json_sha256": "08f0b01a4b1c3cb37686bfa72e87eed65df986f6d45dc0cd3ad5023eea6f5775"
+      },
       "ciphertext": "39e7f634f05a6409a52325df97e617d3c628ee41da9d05d5bbfcb6d3178ba05f",
-      "ciphertext_sha256": "7b6650304128cf655f4f9b1b3d420ab893939a7e32183f12a1e76c03356dc876"
+      "ciphertext_sha256": "747546c92062c430a037a0505bb1505460ff8851b9687b22ec73466726d4295d"
     },
     "attachment": {
       "chunk_index": 0,
@@ -35,15 +36,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_wrong_key",
       "entity_version": 2,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "10112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "3e7a24f8afdaf4a6edc046a27c9ce21ac318e7788a69684319fb1628a3a57c17"},
+      "aad": {
+        "canonical_json_sha256": "4ba819debcbc5a23fc7b7ac2f214b4f4fbcbdf315536af7bff32bd8c7d889b61"
+      },
       "ciphertext": "4b1276b61187d23e9fef8c06ec1906c0bfeaa104565183aeff31e66c6d8967d8",
-      "ciphertext_sha256": "95a76a2b704739af1c41c16cc0fcb0edddc28a14ea0b4c3a080cb35dbe9e6eca"
+      "ciphertext_sha256": "ea3bef860d2b678be59019d0fdf6376be99cdb304f216881e34bdcc0d2419a11"
     }
   },
   {
@@ -55,15 +57,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_wrong_aad",
       "entity_version": 3,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "20112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "aad": {
+        "canonical_json_sha256": "e3d263905c7233ebba6535a04378baeea1a6e3543122cb64f268868719747b4d"
+      },
       "ciphertext": "6b7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "8699c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "694b5aab881c46a940b5bfb656646c148f25269262c4321447c7cf679f5d317c"
     }
   },
   {
@@ -75,15 +78,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_tamper_ciphertext",
       "entity_version": 4,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "30112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "4b06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "006ee1af89795a4a82f935422fcdb3e4a211b4d8b339702a5a6dd5492cb03d2b"
+      },
       "ciphertext": "fb7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "1239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "fd339f1b4e7bd1d446f5fc042ed001332ceaf748e63cacd733e6c48a899527a9"
     }
   },
   {
@@ -95,15 +99,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_beta",
-      "entity_type": "task",
       "entity_id": "ent_wrong_space",
       "entity_version": 5,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "40112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "5f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "7ba5be44525600f3d38688fb46abdfe34b47c8dfc4f23e3e546cb0069bc82639"
+      },
       "ciphertext": "8f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "2239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "24935d59d73ce08a8522e285c064baeeb11fe3beb46fdb1643b3aa2039f97dd2"
     }
   },
   {
@@ -115,35 +120,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_wrong_entity_id",
       "entity_version": 6,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "50112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "6f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "35b39eeb960f799f50d3f0dacb6b2d599f2aef803fa5f7f700e57bc91a108175"
+      },
       "ciphertext": "9f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "3239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
-    }
-  },
-  {
-    "schema_version": "task-manager-e2ee-vector-v1",
-    "scenario": "wrong_entity_type",
-    "description": "Rebinding task ciphertext as another entity type must fail because entity_type is AAD.",
-    "expected_result": "decrypt_reject_wrong_entity_type",
-    "envelope": {
-      "protocol_version": 1,
-      "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
-      "space_id": "sp_alpha",
-      "entity_type": "comment",
-      "entity_id": "ent_wrong_entity_type",
-      "entity_version": 7,
-      "key_epoch": 1,
-      "content_key_id": "ck_space_alpha_epoch_1",
-      "nonce": "60112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "7f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
-      "ciphertext": "af7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "4239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "5a78cfcb69775fa13155dce9d1da013585495e7782498811815c3b115956a7f9"
     }
   },
   {
@@ -155,15 +141,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_wrong_version",
       "entity_version": 8,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "70112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "8f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "0dd3249e450c3bfae6140cda9aa143b3eefc9f12fe9977e85d91653e1da6e6d0"
+      },
       "ciphertext": "bf7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "5239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "612922f2b8e19fe2be5b86979101084e20b6e442c2205b0dc6dcfe9e55bc3c7e"
     }
   },
   {
@@ -175,15 +162,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_replay_rollback_marker",
       "entity_version": 4,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "80112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "9f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "49695282eb84d6c2cae7f9ff02cd7a7fb6183300ac25851303ac9de928cd64be"
+      },
       "ciphertext": "cf7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "6239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "e7f6b09e221d5abbeb84b72b86135797210d9c712b14f0f29891d41dcffee980"
     }
   },
   {
@@ -195,15 +183,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_duplicate_nonce_prevention",
       "entity_version": 9,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "90112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "0f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "aad98aa85d372c01c2036ee20aeda6072e20f92d3db0cc4db931a080dd0045fb"
+      },
       "ciphertext": "df7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "7239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "eb544058cd50080595b639997e678a05b2ba03453627de90b6e1009c0e9ff9d0"
     }
   },
   {
@@ -215,15 +204,16 @@
       "protocol_version": 1,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_rotated_key",
       "entity_version": 10,
       "key_epoch": 2,
       "content_key_id": "ck_space_alpha_epoch_2",
       "nonce": "a0112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "1f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "1b0a27952aafedf928612705918bcf2fdab2a42b1ac826db06c6b830c4f9baf9"
+      },
       "ciphertext": "ef7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "8239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "2c9e92d2317daed00941e13e52bca1dbafd8e25dbb15aa66e549897be57cb8ac"
     }
   },
   {
@@ -232,18 +222,19 @@
     "description": "Protocol versions greater than the implementation supports must fail closed.",
     "expected_result": "reject_unsupported_version",
     "envelope": {
-      "protocol_version": 1,
+      "protocol_version": 2,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_unsupported_version",
       "entity_version": 11,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "b0112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "2f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "dfbceee457c028c6245ad41fe10bcb2252b220580753f4f550d17de0346038b8"
+      },
       "ciphertext": "0f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "9239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "57228afa07ef82a8fca4103714083c498f3f02c0c60ac23f471fb6522757b017"
     }
   },
   {
@@ -252,18 +243,19 @@
     "description": "Protocol versions explicitly deprecated by policy must fail closed even if parsable.",
     "expected_result": "reject_deprecated_version",
     "envelope": {
-      "protocol_version": 1,
+      "protocol_version": 0,
       "suite_id": "TM-E2EE-v1-XCHACHA20POLY1305-HKDF-SHA256",
       "space_id": "sp_alpha",
-      "entity_type": "task",
       "entity_id": "ent_deprecated_version",
       "entity_version": 12,
       "key_epoch": 1,
       "content_key_id": "ck_space_alpha_epoch_1",
       "nonce": "c0112233445566778899aabbccddeeff0011223344556677",
-      "aad": {"canonical_json_sha256": "3f06de4d028806c234454a08da12a7faed8c01e78fce425f689f7a8a02e3d9f7"},
+      "aad": {
+        "canonical_json_sha256": "5c82a9ec0778ca59ac6453f4f0c992b00cd55926b5d8f9ae1e940a3dbb87466b"
+      },
       "ciphertext": "1f7336d619df834918ec30f60b76fd05589b93907cb5fe03700e26e56f8ec516",
-      "ciphertext_sha256": "a239c8ec06108da3881f61642499451d31738d5fa1393fbb3fc172d26508b630"
+      "ciphertext_sha256": "1cb3ee2fd18103a24c10f3250679fbaf646dce5a05a71cb28b821e5212c6e330"
     }
   }
 ]
