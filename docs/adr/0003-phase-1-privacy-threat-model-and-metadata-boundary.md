@@ -1,7 +1,8 @@
 # ADR-0003 — Phase 1 privacy threat model and metadata boundary
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-28
+Accepted: 2026-08-28
 Decision owner: Paul
 Related task: Notion page `3b0319db76c881d39578f6cdbdaa6a77`
 Specification: [`docs/security/privacy-threat-model.md`](../security/privacy-threat-model.md)
@@ -12,11 +13,11 @@ ADR-0001 makes end-to-end encryption mandatory before any usable release stores 
 
 The next Phase 1 architecture/API/security work needs a field-level privacy threat model and metadata boundary. Without one, server schemas, sync APIs, notifications, billing, diagnostics, support exports, CI fixtures, and self-hosting docs could accidentally encode plaintext task semantics or server-visible metadata that weakens the accepted E2EE promise.
 
-This ADR is Proposed only. It records the candidate decision for technical review and Paul’s later human/business acceptance; it does not mark the Notion task accepted, implemented, deployed, or merged.
+This ADR records the accepted decision after technical review and Paul’s human/business acceptance; it does not mark the Notion task implemented or deployed.
 
 ## Decision
 
-Adopt `docs/security/privacy-threat-model.md` as the Phase 1 privacy threat-model specification and metadata boundary once accepted.
+Adopt `docs/security/privacy-threat-model.md` as the Phase 1 privacy threat-model specification and metadata boundary.
 
 The service is not trusted with protected content or content-decryption keys. Android and WearOS clients are trusted to decrypt user content locally after key availability; the Docker-first service, PostgreSQL, S3-compatible object storage, network, CI, backups, notification providers, diagnostics/support surfaces, hosted operators, and self-hosted operators are not trusted with plaintext protected content.
 
@@ -52,7 +53,6 @@ Member or device revocation prevents future access by stopping future sync autho
 - This ADR does not implement code, API endpoints, migrations, clients, telemetry, support export, CI checks, deployment, or production retention workflows.
 - This ADR does not approve plaintext server storage, server-managed content keys, semantic server indexes, server-readable notification schedules, or decrypted support bundles.
 - This ADR does not provide anonymity from all network or operational observers; sizes, timings, account metadata, billing metadata, and membership relationships remain visible where operationally necessary.
-- This ADR does not mark Paul’s human/business acceptance complete.
 
 ## Residual risks and blockers
 
@@ -74,4 +74,9 @@ Member or device revocation prevents future access by stopping future sync autho
 
 ## Acceptance and review state
 
-This ADR remains Proposed. Technical review may approve the documentation candidate, but Paul’s human/business acceptance remains a separate gate before the decision becomes Accepted or downstream work relies on it as final.
+ADR-0003 is Accepted as of 2026-08-28.
+
+Acceptance evidence:
+
+- Paul instructed the project through the WebUI on 2026-08-28 that PR #6 “has been checked and merged now” and to “move this forward now”; Notion Human Acceptance was read back as true.
+- PR #6 (`https://github.com/quantanex-tech/task-manager/pull/6`) was integrated into `main` as merge commit `eb1c50bd59763c5aed9b5504cac60137c93357ef`.
