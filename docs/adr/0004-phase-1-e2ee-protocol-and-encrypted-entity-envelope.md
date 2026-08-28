@@ -1,7 +1,8 @@
 # ADR-0004 — Phase 1 E2EE protocol and encrypted entity envelope
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-28
+Accepted: 2026-08-28
 Decision owner: Paul
 Related task: Notion page `3b0319db76c88193b4c0ee38b28a4fd3`
 Specification: [`docs/e2ee-protocol-v1.md`](../e2ee-protocol-v1.md)
@@ -11,13 +12,13 @@ Test vectors: [`testdata/e2ee/v1/`](../../testdata/e2ee/v1/)
 
 ADR-0001 requires end-to-end encryption before any usable release stores or synchronises real task data. ADR-0002 requires Android and WearOS local persistence to keep protected content in encrypted SQLite and out of plaintext side channels. ADR-0003 defines the accepted Phase 1 privacy threat model and metadata boundary.
 
-The next implementation tasks need one protocol, envelope and vector source instead of per-client invention. The proposal must let an untrusted server store, sequence and return encrypted objects while Android, WearOS, Go contract tests and future clients agree on canonical bytes, key identifiers, algorithm identifiers and fail-closed behaviour.
+The next implementation tasks need one protocol, envelope and vector source instead of per-client invention. The accepted protocol must let an untrusted server store, sequence and return encrypted objects while Android, WearOS, Go contract tests and future clients agree on canonical bytes, key identifiers, algorithm identifiers and fail-closed behaviour.
 
 Paul raised per-space content keys as the preferred baseline. This ADR evaluates that baseline against blast radius, rotation/revocation, nonce uniqueness, attachments and selective sharing before deciding whether every entity also needs a wrapped per-entity data key.
 
 ## Decision
 
-Adopt `docs/e2ee-protocol-v1.md` as the proposed Phase 1 E2EE protocol and encrypted-entity-envelope specification.
+Adopt `docs/e2ee-protocol-v1.md` as the accepted Phase 1 E2EE protocol and encrypted-entity-envelope specification.
 
 Use only audited, standard primitives and maintained platform libraries:
 
@@ -80,7 +81,7 @@ Per-space keys are acceptable for Phase 1 because selective sharing is deferred 
 ## Non-goals
 
 - No production client/server crypto implementation, deployment, real user data, live secrets, recovery flow, device provisioning, key backup, sharing UI, telemetry or support export is implemented by this ADR.
-- This ADR does not accept ADR-0004; it remains Proposed until separate human/business acceptance.
+- Acceptance of this protocol does not authorise production cryptography, deployment, device provisioning, recovery/key backup, sharing/revocation implementation, real cryptographic round-trip vectors or feature work. Those remain separate future gates.
 - This ADR does not change ADR-0001, ADR-0002 or ADR-0003.
 
 ## Required implementation rules after acceptance
@@ -95,4 +96,13 @@ Per-space keys are acceptable for Phase 1 because selective sharing is deferred 
 
 ## Acceptance and review state
 
-ADR-0004 is Proposed for review. Human/business acceptance, Notion Done state, merge to `main`, production implementation and deployment remain separate gates.
+ADR-0004 is Accepted as of 2026-08-28.
+
+Acceptance evidence:
+
+- Paul explicitly accepted the corrected Phase 1 E2EE protocol by replying `ACCEPT E2EE PROTOCOL` on 2026-08-28; the Notion source task `3b0319db76c88193b4c0ee38b28a4fd3` was read back with Human Acceptance=true.
+- Independent technical approval completed in `t_58192039` after the correction cycle `t_819078b2` -> `t_65c303a8` -> `t_59f43297` -> `t_94476219`.
+- PR #8 head `1ba5acea65083f03e7eec9279dec3becb4d10c43` was the corrected proposal reviewed against base `3d8119e2a1c89268529705831a31c95b418358c8`.
+- PR #8 was integrated into `main` as merge commit `e98bc1523395560888e26b7cc6915eae3981daaa` on 2026-08-28T13:29:17Z.
+
+Production implementation, deployment, device provisioning, recovery/key backup, sharing/revocation implementation, real cryptographic round-trip vectors and Notion delivery state remain separate gates.
