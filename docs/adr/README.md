@@ -9,6 +9,7 @@ Accepted ADRs are canonical in this directory once committed. Notion can remain 
 | [ADR-0003](0003-phase-1-privacy-threat-model-and-metadata-boundary.md) | Accepted | Phase 1 privacy threat model and server-visible metadata boundary. |
 | [ADR-0004](0004-phase-1-e2ee-protocol-and-encrypted-entity-envelope.md) | Accepted | Phase 1 E2EE protocol and encrypted entity envelope. |
 | [ADR-0005](0005-phase-1-encrypted-offline-sync-and-conflict-resolution.md) | Accepted | Phase 1 encrypted offline sync and conflict resolution. |
+| [ADR-0006](0006-phase-1-device-identity-provisioning-and-secure-key-storage.md) | Proposed | Phase 1 device identity, provisioning and secure key storage. |
 
 ## Process
 
