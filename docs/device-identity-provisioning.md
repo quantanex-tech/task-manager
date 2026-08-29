@@ -2,7 +2,7 @@
 
 Related ADR: [ADR-0006](adr/0006-phase-1-device-identity-provisioning-and-secure-key-storage.md)
 Related Notion task: `3b0319db-76c8-8143-bbb8-f8f434098c9f`
-Status: Proposed Phase 1 specification for review; not accepted and not implemented.
+Status: Accepted Phase 1 specification; not implemented.
 
 ## Purpose
 
@@ -21,7 +21,8 @@ It is documentation only. It does not implement production cryptography, Android
 ## Goals
 
 - Keep private device keys, plaintext space/content/database keys, pairing secrets, and recovery material off the server.
-- Let a first Android phone bootstrap local encrypted storage and create the first trusted device identity without blocking local use on server-side content-key custody.
+- Let a first Android phone automatically bootstrap local encrypted storage and create the first trusted device identity invisibly, without blocking local task/reminder capture on account creation, sign-in, server registration, pairing, recovery setup, or server-side content-key custody.
+- Let users create local encrypted tasks and reminders immediately and offline, with notification permission requested only when a reminder first needs delivery.
 - Let a trusted Android phone provision a companion WearOS watch for a bounded Phase 1 subset without inventing a standalone watch recovery model.
 - Let an existing trusted device approve a new device with mutual authentication, transcript binding, expiry, replay resistance, and privacy-safe server relay.
 - Define inventory, lifecycle, revocation, stale-device, logging, API/event, test, threat, migration, and unresolved-decision boundaries before implementation.
@@ -50,22 +51,32 @@ It is documentation only. It does not implement production cryptography, Android
 | Transport/session credentials | Authenticate the account/device to the server and protect network sessions. These are not content-decryption keys. | Account session and registered device. | Issued by auth service after user login and device registration; TLS sessions negotiated per connection. | OS credential storage/app-private no-backup storage; refresh tokens protected by Keystore where supported. | Server sees auth/session identifiers and opaque device binding state. | Revoke on logout, lost-device action, token expiry, suspected compromise, or account security event. | Account recovery may restore login ability but not content-key access. |
 | Pairing secrets / short codes | Human-verifiable proof for one pairing/provisioning session. | Existing trusted device plus candidate device/watch for one bounded session. | Random high-entropy secret encoded as QR or short authentication string; ephemeral session keys per attempt. | Memory only; at most encrypted SQLCipher pending state for retry metadata without the secret. | Never visible. Server may relay opaque session ID, expiry, public ephemeral keys, and encrypted handshake messages. | Expires quickly; one accepted transcript consumes it. Duplicate/replayed attempts are rejected idempotently. | Not backed up and not recoverable. |
 
-## Android-first bootstrap and secure storage
+## Seamless local-first bootstrap and secure storage
 
 ### First trusted Android phone
 
-1. User installs the Android app and signs in or creates an account. Account authentication proves account ownership only; it does not recover E2EE content.
-2. The app creates an installation ID, generates local database key material, creates Keystore wrapping material, and opens SQLCipher only after the key unwrap succeeds.
-3. The app generates device identity and device key-agreement keys. When Android Keystore supports the key operation and policy, private keys should be non-exportable and hardware-backed if available. When the primitive is unavailable in Keystore, an audited crypto library may generate the key and store it wrapped by a Keystore key in no-backup storage.
-4. The app registers only opaque device ID, public device keys, key IDs, and algorithm/version identifiers with the server. Capability details remain local/encrypted unless Paul later accepts a narrow privacy exception.
-5. For a first private space, the trusted client generates a random space content key epoch and keeps plaintext key material only in trusted memory/SQLCipher. The server receives only opaque key ID/epoch metadata and encrypted payloads.
+1. User installs and opens the Android app. The normal first-run path must take the user directly to local task/reminder entry without mandatory account creation, sign-in, server registration, device pairing, recovery setup, crypto/security wizard, raw key wording, or Keystore terminology.
+2. On first launch or first local write, the app automatically creates an installation ID, generates local database key material, creates Keystore wrapping material, and opens SQLCipher only after the key unwrap succeeds. This setup is background/on-demand plumbing, not a prerequisite screen.
+3. The app generates device identity and device key-agreement keys locally. When Android Keystore supports the key operation and policy, private keys should be non-exportable and hardware-backed if available. When the primitive is unavailable in Keystore, an audited crypto library may generate the key and store it wrapped by a Keystore key in no-backup storage.
+4. For the first local private space, the trusted client generates a random space content key epoch and keeps plaintext key material only in trusted memory/SQLCipher. Local task and reminder data is persisted only after the encrypted local store is ready.
+5. Account authentication proves account ownership only; it does not recover E2EE content. Sign-in and server device registration are deferred until the user chooses sync, multi-device, backup/recovery when designed, sharing, or another network-dependent capability.
+6. When registration is needed, the app registers only opaque device ID, public device keys, key IDs, and algorithm/version identifiers with the server. Capability details remain local/encrypted unless Paul later accepts a narrow privacy exception.
+
+### Immediate task and reminder capture UX
+
+- Local task creation must remain available offline after the encrypted local store is ready. No server availability, account session, device inventory fetch, pairing session, or recovery configuration may be required for local encrypted task persistence.
+- Reminder creation must be immediate: the user can add the reminder definition with the task before notification permission has been granted. Reminder details remain protected content under ADR-0003.
+- Request OS notification permission just in time when the first reminder needs notification delivery, not during generic onboarding and not before a user expresses reminder intent.
+- If notification permission is denied, task creation must still succeed and the reminder definition must remain saved locally with a clear disabled-notification state and a plain-language path to enable notifications later. Denial must not discard the reminder, block offline task capture, or leak reminder details into server-visible metadata or push payloads.
+- Setup latency must not cause avoidable data loss. If a user starts typing before encrypted storage is open, the app may hold the draft in volatile UI memory while setup completes; durable persistence starts only after SQLCipher opens. If secure storage cannot be opened before the app can safely save, the UI must say plainly that the item has not been saved yet and offer retry/reset paths that do not store plaintext.
+- Unsupported, unavailable, locked, invalidated, or corrupted secure storage must fail safely with typed state and plain-language recovery/error UX. The app must not silently fall back to plaintext storage, generate a second identity over existing encrypted state, overwrite encrypted files, or represent software-backed protection as hardware-backed.
 
 ### Keystore capability handling
 
 - Hardware-backed Keystore is preferred but not universal. Implementation must query platform capabilities and record a privacy-safe local diagnostic category such as `hardware_backed`, `software_backed`, or `unavailable`.
-- Software-backed Keystore may be allowed for Phase 1 personal use if Paul accepts the trade-off. It must not be silently represented as hardware-backed.
+- Software-backed Keystore is allowed for Phase 1 personal/self-host use with local warning and no hardware-backed claim. It must not be silently represented as hardware-backed.
 - If Keystore is unavailable, locked, permanently invalidated, or lacks required authenticated encryption/signing support, startup fails with a typed key-storage state instead of overwriting local data or generating a second identity over existing encrypted state.
-- Rooted, debug, emulator, or tampered devices are not automatically banned in this Proposed default, because self-hosters and development need testability. The app must show local risk state and may block production sync/key export on a later release-hardening decision.
+- Rooted, debug, emulator, or tampered devices are not automatically banned in this accepted default, because self-hosters and development need testability. The app must show local risk state and may block production sync/key export on a later release-hardening decision.
 
 ### Authentication and invalidation policy
 
@@ -87,6 +98,19 @@ Until encrypted recovery/key backup is accepted, Android backup must be disabled
 - logs, crash breadcrumbs, screenshots, notification caches, attachment caches, and test artifacts containing protected content.
 
 Backups of server PostgreSQL/object storage may contain ciphertext and allowed operational metadata only. They must not create a server-side content-key recovery path.
+
+## Explicit high-risk provisioning and key-management flows
+
+Normal first-run local setup is intentionally invisible. High-risk trust and key-management flows remain explicit and user mediated:
+
+- adding another Android device;
+- adding or replacing a companion WearOS watch;
+- exporting, wrapping, transferring, rotating, or re-wrapping content keys/device keys;
+- configuring future recovery/key backup;
+- revoking, expiring, or reinstating device trust;
+- changing secure-storage, user-presence, recovery, or other security policy.
+
+These flows must use clear user intent, fresh user presence where required by policy, transcript verification for provisioning, and privacy-safe typed errors. They must not be hidden inside generic onboarding or implied by account sign-in alone.
 
 ## Minimum Phase 1 WearOS provisioning
 
@@ -114,7 +138,7 @@ Standalone watch provisioning, independent watch account recovery, iOS/macOS, Ap
 
 ### Recommended default flow
 
-1. Candidate signs in to the account. The server records it as `candidate_pending_user_approval` with opaque device ID, public identity key, public agreement key, key algorithm/version, and expiry. It receives no content keys.
+1. Candidate signs in to the account only when the user has chosen to add another device. The server records it as `candidate_pending_user_approval` with opaque device ID, public identity key, public agreement key, key algorithm/version, and expiry. It receives no content keys.
 2. Existing trusted device shows a local approval prompt after sync: "Approve a new device?" User-facing device name/platform details stay local or encrypted; the server-visible event is opaque.
 3. Candidate and existing device exchange ephemeral X25519 public keys through a server-relayed session or QR/nearby channel. The pairing session has a random opaque session ID, short expiry, and single-use nonce/counter state.
 4. Both devices compute a transcript hash over protocol version, suite ID, session ID, account ID or account-scoped opaque ID, approving device ID/public keys, candidate device ID/public keys, ephemeral public keys, expiry, requested key epochs, and server relay nonce(s).
@@ -238,6 +262,10 @@ Endpoint names are illustrative. Implementation tasks may choose final paths and
 
 Future implementation should add deterministic tests with synthetic values only:
 
+- First-run/local-first UX tests proving account creation, sign-in, server registration, device pairing, recovery setup, crypto/security wizard copy, raw key wording, and Keystore terminology are not mandatory before local encrypted task/reminder capture.
+- Offline local task tests proving create/edit remains available without network/server/session state after the encrypted local store opens.
+- Reminder permission tests proving reminder creation is immediate, notification permission is requested just in time, denial preserves the reminder definition with disabled-notification state, and denied permission does not block task creation.
+- Setup latency/failure tests proving drafts are not durably stored before SQLCipher opens, typed secure-storage failures do not overwrite encrypted data, and no plaintext fallback path is used.
 - Keystore abstraction tests for hardware-backed, software-backed, unavailable, locked, invalidated, corrupted-wrapper, reinstall/restore, and credential-change states.
 - SQLCipher open tests proving existing DB is not overwritten when key unwrap fails.
 - Android backup policy tests or manifest/static checks proving protected paths are excluded.
@@ -290,7 +318,9 @@ Rejected as the default. Human-readable names and detailed platform/capability f
 
 Deferred. Companion-mediated provisioning keeps Phase 1 bounded and avoids designing independent watch recovery, input, display, and secure-channel UX before the Android phone flow is accepted.
 
-## Decisions requested from Paul
+## Accepted Phase 1 defaults
+
+Paul accepted ADR-0006 on 2026-08-29 with the binding requirement that normal encrypted bootstrap be effectively invisible and local task/reminder entry be available immediately. These defaults remain accepted unless superseded by a later ADR:
 
 | Decision | Recommended default | Trade-offs |
 | --- | --- | --- |
@@ -307,11 +337,13 @@ Deferred. Companion-mediated provisioning keeps Phase 1 bounded and avoids desig
 | Task criterion | Specification response |
 | --- | --- |
 | Key purposes and boundaries | Key/identifier table defines purpose, owner, generation, storage, server visibility, rotation/revocation, and backup/recovery. |
-| Android-first bootstrap and secure storage | Android bootstrap, Keystore capability, auth/invalidation, reinstall/restore/rooted posture, and backup exclusions are specified without claiming universal hardware backing. |
+| Android-first bootstrap and secure storage | Seamless local-first Android bootstrap, Keystore capability, auth/invalidation, reinstall/restore/rooted posture, and backup exclusions are specified without claiming universal hardware backing. |
+| Immediate task/reminder capture | Normal setup requires no mandatory account, sign-in, server registration, pairing, recovery setup, crypto/security wizard, raw key wording, or Keystore terminology before local encrypted task/reminder entry. |
+| Notification permission UX | Permission is requested just in time when the first reminder needs delivery; denial preserves the task and reminder with disabled-notification state. |
 | Minimum WearOS flow | Companion-mediated phone-to-watch provisioning covers explicit trust, transcript protection, retries, failure, revocation, and future standalone boundaries. |
 | New-device approval | Pairing flow binds transcript, mutual authentication, expiry, MITM/replay resistance, duplicate/retry handling, malicious server assumptions, and ADR-0004-compatible primitives. |
 | Inventory and lifecycle | Inventory metadata, lifecycle states, stale handling, lost-device revocation, and key-epoch consequences are specified with honest revocation limitations. |
 | Server-visible metadata | Allowed and prohibited metadata follow ADR-0003 and propose only one explicit privacy exception for Paul. |
 | Recovery separation | Provisioning and recovery are separated; Phase 1 does not promise recoverability. |
 | Failure/logging/API/tests/threats | Typed errors, privacy-safe logs, API/event requirements, synthetic test strategy, threat cases, limitations, alternatives, migration/versioning, and non-goals are included. |
-| Unresolved choices | Decisions requested from Paul lists recommended defaults and trade-offs. |
+| Accepted defaults | Accepted Phase 1 defaults list the chosen defaults and trade-offs that remain in force unless a later ADR supersedes them. |

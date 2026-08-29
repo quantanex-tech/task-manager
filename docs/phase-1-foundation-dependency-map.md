@@ -8,7 +8,7 @@ Last reviewed from Notion: 2026-08-29
 
 Phase 1 must establish the technical foundation before product features start depending on unstable security, storage, sync, API, or release assumptions. This map records the safe implementation order and the readiness gates that future agents and contributors must check before moving child tasks to `Ready` or writing code.
 
-ADR-0001 is already accepted: end-to-end encryption is mandatory before any usable release stores or syncs real task data. ADR-0003 is accepted for the Phase 1 privacy threat model and metadata boundary. ADR-0004 is accepted for the E2EE protocol and encrypted entity envelope. ADR-0005 is accepted for encrypted offline sync and conflict resolution. ADR-0006 is proposed for device identity, provisioning and secure key storage; downstream implementation remains blocked until that decision is independently reviewed and accepted.
+ADR-0001 is already accepted: end-to-end encryption is mandatory before any usable release stores or syncs real task data. ADR-0003 is accepted for the Phase 1 privacy threat model and metadata boundary. ADR-0004 is accepted for the E2EE protocol and encrypted entity envelope. ADR-0005 is accepted for encrypted offline sync and conflict resolution. ADR-0006 is accepted for device identity, provisioning, secure key storage, and seamless local-first bootstrap: first launch must allow immediate encrypted local task/reminder capture without mandatory account creation, sign-in, server registration, pairing, recovery setup, or crypto/security wizard.
 
 ## Backlog state at review time
 
@@ -56,10 +56,10 @@ Blocked downstream work includes task/list APIs, encrypted object storage, sync,
 Required before usable client persistence or sync:
 
 - Specify the E2EE protocol and encrypted entity envelope. ADR-0004 and `docs/e2ee-protocol-v1.md` define the accepted v1 protocol, envelope and deterministic vectors.
-- Design device identity, provisioning, secure key storage, recovery, key backup, sharing, membership changes, revocation, and key rotation. Proposed ADR-0006 and `docs/device-identity-provisioning.md` define the candidate device identity/provisioning boundary, but they are not accepted until the separate review/human acceptance gate completes.
+- Design device identity, provisioning, secure key storage, recovery, key backup, sharing, membership changes, revocation, and key rotation. ADR-0006 and `docs/device-identity-provisioning.md` define the accepted device identity/provisioning boundary, including invisible encrypted local bootstrap, deferred account/server registration until network-dependent capabilities, just-in-time notification permission for reminders, and explicit user-mediated trust for new devices/watch/key/recovery/security-policy flows.
 - Produce versioned protocol fixtures that future Android, WearOS, server, and other clients can reuse.
 
-Downstream code must not invent encryption envelope fields, key identifiers, recovery semantics, device provisioning semantics, or sharing behaviour without these decisions. Device provisioning, recovery, encrypted key backup, sharing, revocation and production implementation remain explicit deferred gates.
+Downstream code must not invent encryption envelope fields, key identifiers, recovery semantics, device provisioning semantics, or sharing behaviour without these decisions. Device provisioning implementation, recovery, encrypted key backup, sharing, revocation implementation and production implementation remain explicit deferred gates.
 
 ### 3. Client storage and offline model
 
