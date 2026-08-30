@@ -22,6 +22,7 @@ Canonical planning sources:
 - GitHub Actions provide repeatable validation and release artifacts as implementation surfaces arrive.
 - End-to-end encryption is mandatory before any usable release stores or syncs real user task data. See [`docs/adr/0001-phase-1-e2ee-mandatory.md`](docs/adr/0001-phase-1-e2ee-mandatory.md).
 - Android/WearOS local persistence is specified as encrypted SQLite behind a replaceable repository boundary. See [`docs/architecture/encrypted-client-persistence.md`](docs/architecture/encrypted-client-persistence.md) and [`docs/adr/0002-encrypted-client-sqlite-persistence.md`](docs/adr/0002-encrypted-client-sqlite-persistence.md).
+- The candidate first usable release target is Android-phone-first personal dogfood/alpha. See [`docs/release/0001-android-first-personal-release.md`](docs/release/0001-android-first-personal-release.md).
 - Personal/core usage should remain fully useful for free; commercial value should come from teams/businesses with more than two users.
 
 ## Repository layout
