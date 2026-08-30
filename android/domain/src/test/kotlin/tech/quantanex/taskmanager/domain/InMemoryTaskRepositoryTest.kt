@@ -65,6 +65,43 @@ class InMemoryTaskRepositoryTest {
     }
 
     @Test
+    fun tryEditRejectsInvalidReminderForExistingTaskAndPreservesTaskState() {
+        val repository: TaskRepository = InMemoryTaskRepository()
+        val originalReminder = ReminderAt(Instant.parse("2026-09-01T09:30:00Z"))
+        val originalTask = repository.complete(
+            repository.create(title = "Synthetic fixture task", reminderAt = originalReminder).id
+        )
+
+        val result = repository.tryEdit(
+            originalTask.id,
+            title = "Edited synthetic fixture",
+            reminderAt = ReminderAt.fromEpochMilliseconds(-1),
+        )
+
+        assertIs<TaskRepositoryError.InvalidReminder>(result)
+        assertEquals(originalTask, repository.get(originalTask.id))
+        assertEquals(listOf(originalTask), repository.listInbox())
+    }
+
+    @Test
+    fun trySetReminderRejectsInvalidReminderForExistingTaskAndPreservesTaskState() {
+        val repository: TaskRepository = InMemoryTaskRepository()
+        val originalReminder = ReminderAt(Instant.parse("2026-09-01T09:30:00Z"))
+        val originalTask = repository.complete(
+            repository.create(title = "Synthetic fixture task", reminderAt = originalReminder).id
+        )
+
+        val result = repository.trySetReminder(
+            originalTask.id,
+            ReminderAt.fromEpochMilliseconds(-1),
+        )
+
+        assertIs<TaskRepositoryError.InvalidReminder>(result)
+        assertEquals(originalTask, repository.get(originalTask.id))
+        assertEquals(listOf(originalTask), repository.listInbox())
+    }
+
+    @Test
     fun repositoryInstancesAreVolatileInMemoryAndUseSyntheticFixturesOnly() {
         val firstRepository: TaskRepository = InMemoryTaskRepository()
         val secondRepository: TaskRepository = InMemoryTaskRepository()
