@@ -12,9 +12,15 @@ import kotlinx.coroutines.withContext
 import tech.quantanex.taskmanager.data.InboxStoreOpenOutcome
 import tech.quantanex.taskmanager.data.InboxTaskStore
 import tech.quantanex.taskmanager.domain.InboxTask
+import tech.quantanex.taskmanager.domain.ReminderAt
 import tech.quantanex.taskmanager.domain.TaskId
+import tech.quantanex.taskmanager.reminders.LocalReminderCoordinator
+import tech.quantanex.taskmanager.reminders.ReminderDeliveryState
+import java.time.Instant
+import java.time.format.DateTimeParseException
 
 private const val STORE_UNAVAILABLE_MESSAGE = "Encrypted local storage is unavailable. Unsaved draft text stays only on this screen."
+private const val REMINDER_TIME_HELP = "Use an exact UTC time like 2026-09-01T09:30:00Z."
 
 data class InboxUiState(
     val isLoading: Boolean = true,
@@ -22,9 +28,12 @@ data class InboxUiState(
     val tasks: List<InboxTask> = emptyList(),
     val selectedTask: InboxTask? = null,
     val editTitle: String = "",
+    val editReminderText: String = "",
     val pendingDeleteTaskId: TaskId? = null,
     val validationMessage: String? = null,
     val storeErrorMessage: String? = null,
+    val reminderDeliveryState: ReminderDeliveryState = ReminderDeliveryState.NoReminder,
+    val shouldRequestNotificationPermission: Boolean = false,
 ) {
     val hasTasks: Boolean = tasks.isNotEmpty()
 }
@@ -32,6 +41,7 @@ data class InboxUiState(
 class InboxViewModel(
     private val storeProvider: suspend () -> InboxStoreOpenOutcome,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val reminderCoordinator: LocalReminderCoordinator? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(InboxUiState())
     val state: StateFlow<InboxUiState> = mutableState
@@ -66,14 +76,21 @@ class InboxViewModel(
             it.copy(
                 selectedTask = task,
                 editTitle = task.title.value,
+                editReminderText = task.reminderAt?.instant?.toString().orEmpty(),
                 pendingDeleteTaskId = null,
                 validationMessage = null,
+                reminderDeliveryState = deliveryStateFor(task),
+                shouldRequestNotificationPermission = false,
             )
         }
     }
 
     fun updateEditTitle(title: String) {
         mutableState.update { it.copy(editTitle = title, validationMessage = null) }
+    }
+
+    fun updateEditReminderText(reminderText: String) {
+        mutableState.update { it.copy(editReminderText = reminderText, validationMessage = null) }
     }
 
     fun saveSelectedTask() {
@@ -85,7 +102,51 @@ class InboxViewModel(
         }
         runStoreAction { activeStore ->
             val edited = activeStore.edit(current, title)
-            refreshFrom(activeStore).copy(selectedTask = edited, editTitle = edited.title.value, validationMessage = null)
+            refreshFrom(activeStore).withSelectedTask(edited)
+        }
+    }
+
+    fun saveSelectedReminder() {
+        val current = state.value.selectedTask ?: return
+        val reminder = parseReminderOrUpdateState(state.value.editReminderText) ?: return
+        runStoreAction { activeStore ->
+            val withReminder = activeStore.setReminder(current, reminder)
+            val deliveryState = reminderCoordinator?.reconcile(withReminder) ?: ReminderDeliveryState.EncryptedStateUnavailable
+            refreshFrom(activeStore).withSelectedTask(withReminder).copy(
+                reminderDeliveryState = deliveryState,
+                shouldRequestNotificationPermission = deliveryState == ReminderDeliveryState.NotificationPermissionDenied,
+                validationMessage = null,
+            )
+        }
+    }
+
+    fun removeSelectedReminder() {
+        val current = state.value.selectedTask ?: return
+        runStoreAction { activeStore ->
+            reminderCoordinator?.cancel(current)
+            val withoutReminder = activeStore.removeReminder(current)
+            refreshFrom(activeStore).withSelectedTask(withoutReminder).copy(
+                editReminderText = "",
+                reminderDeliveryState = ReminderDeliveryState.NoReminder,
+                shouldRequestNotificationPermission = false,
+                validationMessage = null,
+            )
+        }
+    }
+
+    fun onNotificationPermissionResult() {
+        val current = state.value.selectedTask ?: return
+        if (current.reminderAt == null) {
+            mutableState.update { it.copy(shouldRequestNotificationPermission = false) }
+            return
+        }
+        runStoreAction { activeStore ->
+            val refreshed = activeStore.get(current.id) ?: current
+            val deliveryState = reminderCoordinator?.reconcile(refreshed) ?: ReminderDeliveryState.EncryptedStateUnavailable
+            refreshFrom(activeStore).withSelectedTask(refreshed).copy(
+                reminderDeliveryState = deliveryState,
+                shouldRequestNotificationPermission = false,
+            )
         }
     }
 
@@ -93,7 +154,7 @@ class InboxViewModel(
         val current = state.value.selectedTask ?: return
         runStoreAction { activeStore ->
             val completed = activeStore.complete(current.id)
-            refreshFrom(activeStore).copy(selectedTask = completed, editTitle = completed.title.value)
+            refreshFrom(activeStore).withSelectedTask(completed)
         }
     }
 
@@ -101,7 +162,7 @@ class InboxViewModel(
         val current = state.value.selectedTask ?: return
         runStoreAction { activeStore ->
             val restored = activeStore.undoCompletion(current.id)
-            refreshFrom(activeStore).copy(selectedTask = restored, editTitle = restored.title.value)
+            refreshFrom(activeStore).withSelectedTask(restored)
         }
     }
 
@@ -118,8 +179,16 @@ class InboxViewModel(
         val current = state.value.selectedTask ?: return
         if (state.value.pendingDeleteTaskId != current.id) return
         runStoreAction { activeStore ->
+            reminderCoordinator?.cancel(current)
             activeStore.delete(current.id)
-            refreshFrom(activeStore).copy(selectedTask = null, editTitle = "", pendingDeleteTaskId = null)
+            refreshFrom(activeStore).copy(
+                selectedTask = null,
+                editTitle = "",
+                editReminderText = "",
+                reminderDeliveryState = ReminderDeliveryState.NoReminder,
+                pendingDeleteTaskId = null,
+                shouldRequestNotificationPermission = false,
+            )
         }
     }
 
@@ -165,6 +234,19 @@ class InboxViewModel(
         }
     }
 
+    private fun parseReminderOrUpdateState(reminderText: String): ReminderAt? {
+        if (reminderText.isBlank()) {
+            mutableState.update { it.copy(validationMessage = REMINDER_TIME_HELP) }
+            return null
+        }
+        return try {
+            ReminderAt(Instant.parse(reminderText.trim()))
+        } catch (_: DateTimeParseException) {
+            mutableState.update { it.copy(validationMessage = REMINDER_TIME_HELP) }
+            null
+        }
+    }
+
     private fun refreshFrom(activeStore: InboxTaskStore): InboxUiState {
         val tasks = activeStore.listInbox()
         val selectedId = mutableState.value.selectedTask?.id
@@ -173,8 +255,22 @@ class InboxViewModel(
             tasks = tasks,
             selectedTask = selected,
             editTitle = selected?.title?.value ?: mutableState.value.editTitle,
+            editReminderText = selected?.reminderAt?.instant?.toString() ?: mutableState.value.editReminderText,
             pendingDeleteTaskId = mutableState.value.pendingDeleteTaskId?.takeIf { it == selected?.id },
         )
+    }
+
+    private fun InboxUiState.withSelectedTask(task: InboxTask): InboxUiState = copy(
+        selectedTask = task,
+        editTitle = task.title.value,
+        editReminderText = task.reminderAt?.instant?.toString().orEmpty(),
+        reminderDeliveryState = deliveryStateFor(task),
+    )
+
+    private fun deliveryStateFor(task: InboxTask): ReminderDeliveryState = when {
+        task.reminderAt == null -> ReminderDeliveryState.NoReminder
+        state.value.selectedTask?.id == task.id -> reminderDeliveryState
+        else -> ReminderDeliveryState.EncryptedStateUnavailable
     }
 
     override fun onCleared() {

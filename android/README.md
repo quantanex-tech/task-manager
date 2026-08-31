@@ -2,11 +2,11 @@
 
 This `android/` Gradle workspace contains the Android-side modules for the Android-first dogfood/alpha slices:
 
-- `android/app`: bounded Slice 3 single-activity Jetpack Compose phone application candidate for the first-launch encrypted local Inbox workflow.
+- `android/app`: bounded Slice 4 single-activity Jetpack Compose phone application candidate for the first-launch encrypted local Inbox workflow plus one optional exact local reminder per task.
 - `android/domain`: pure Kotlin/JVM repository contract, domain models, and fixture-only in-memory repository tests.
 - `android/persistence`: Android library adapter that backs the domain `TaskRepository` with Room 2.8.x and SQLCipher Community Edition, plus Android Keystore-backed local database-key bootstrap and Android backup/data-extraction exclusions.
 
-The app candidate is not deployed, publication-ready, installable-proven on Paul's device, a reminder scheduler/notification surface, sync/accounts/networking, or a usable/live/final-accepted release. Tests and fixtures must remain synthetic; do not persist real task/reminder data in this workspace until the full accepted release boundary is satisfied.
+The app candidate is not deployed, publication-ready, installable-proven on Paul's device, sync/accounts/networking, or a usable/live/final-accepted release. Tests and fixtures must remain synthetic; do not persist real task/reminder data in this workspace until the full accepted release boundary is satisfied.
 
 ## Local toolchain used in this worker environment
 
@@ -58,6 +58,15 @@ gradle -p android :app:connectedDebugAndroidTest --no-daemon
 ```
 
 In the current Slice 3 worker environment, `adb devices` returned only `List of devices attached`; no emulator or Android device was attached, so connected instrumentation tests were not executed. The app and instrumentation APKs were compiled instead.
+
+## Slice 4 reminder and notification boundaries
+
+- Reminder entry is intentionally local-first: the task detail surface stores one optional exact UTC instant through the encrypted `InboxTaskStore`/`TaskRepository` boundary; blank or unparsable reminder input is rejected before storage mutation.
+- `LocalReminderCoordinator` requests scheduling only when notification posting is currently permitted. Permission denial saves the encrypted reminder, avoids exact-alarm scheduling, and leaves a visible disabled-notification state with guidance.
+- `AndroidExactReminderScheduler` uses Android exact alarms only when `AlarmManager` reports exact-alarm capability. Unavailable or revoked capability returns an explicit degraded state; there is no inexact or best-effort fallback.
+- Alarm, boot, locked-boot, time-set, and time-zone receivers reopen the encrypted store before reading reminder data. Store/key/cipher/database failure is fail-closed; receivers do not log protected content, trigger protected reminders from plaintext fallback state, or overwrite encrypted data to recover.
+- The broadcast alarm identity is an opaque local ID derived only for Android alarm bookkeeping. Alarm intents do not carry task titles, reminder text, due timestamps, or notification content.
+- Notification rendering decrypts task content only by reopening the local encrypted store on device. The public/lock-screen notification version is generic/private; if the store is unavailable or no due task can be decrypted, only generic text is rendered.
 
 ## Slice 3 app boundaries
 

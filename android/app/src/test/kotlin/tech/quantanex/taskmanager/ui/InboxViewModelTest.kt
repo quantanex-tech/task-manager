@@ -11,6 +11,10 @@ import tech.quantanex.taskmanager.domain.InboxTask
 import tech.quantanex.taskmanager.domain.ReminderAt
 import tech.quantanex.taskmanager.domain.TaskId
 import tech.quantanex.taskmanager.domain.TaskTitle
+import tech.quantanex.taskmanager.reminders.ExactReminderScheduler
+import tech.quantanex.taskmanager.reminders.LocalReminderCoordinator
+import tech.quantanex.taskmanager.reminders.NotificationPermissionGate
+import tech.quantanex.taskmanager.reminders.ReminderDeliveryState
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -141,9 +145,101 @@ class InboxViewModelTest {
         assertEquals(listOf<ReminderAt?>(reminder), store.editReminderValues)
     }
 
-    private fun openedViewModel(store: FakeInboxTaskStore): InboxViewModel = InboxViewModel(
+    @Test
+    fun addEditViewAndRemoveReminderMutatesEncryptedStoreBoundaryAndSchedulesExactly() = runTest(dispatcher) {
+        val scheduler = RecordingReminderScheduler()
+        val viewModel = openedViewModel(
+            store = FakeInboxTaskStore(),
+            coordinator = LocalReminderCoordinator(AlwaysAllowedNotifications, scheduler),
+        )
+
+        viewModel.updateDraftTitle("Task with reminder")
+        viewModel.createTask()
+        val task = viewModel.state.value.tasks.single()
+        viewModel.selectTask(task.id)
+        viewModel.updateEditReminderText("2026-09-01T09:30:00Z")
+        viewModel.saveSelectedReminder()
+
+        assertEquals(Instant.parse("2026-09-01T09:30:00Z"), viewModel.state.value.selectedTask?.reminderAt?.instant)
+        assertEquals("2026-09-01T09:30:00Z", viewModel.state.value.editReminderText)
+        assertEquals(ReminderDeliveryState.Scheduled, viewModel.state.value.reminderDeliveryState)
+        assertEquals(listOf(Instant.parse("2026-09-01T09:30:00Z")), scheduler.scheduledInstants)
+
+        viewModel.updateEditReminderText("2026-09-02T10:45:00Z")
+        viewModel.saveSelectedReminder()
+        assertEquals(Instant.parse("2026-09-02T10:45:00Z"), viewModel.state.value.selectedTask?.reminderAt?.instant)
+        assertEquals(Instant.parse("2026-09-02T10:45:00Z"), scheduler.scheduledInstants.last())
+
+        viewModel.removeSelectedReminder()
+        assertNull(viewModel.state.value.selectedTask?.reminderAt)
+        assertEquals(ReminderDeliveryState.NoReminder, viewModel.state.value.reminderDeliveryState)
+        assertEquals(listOf(task.id), scheduler.cancelledTaskIds)
+    }
+
+    @Test
+    fun notificationPermissionDenialDoesNotBlockReminderSaveAndRequestsPermissionContextually() = runTest(dispatcher) {
+        val scheduler = RecordingReminderScheduler()
+        val viewModel = openedViewModel(
+            store = FakeInboxTaskStore(),
+            coordinator = LocalReminderCoordinator(DeniedNotifications, scheduler),
+        )
+
+        viewModel.updateDraftTitle("Permission denied reminder")
+        viewModel.createTask()
+        val task = viewModel.state.value.tasks.single()
+        viewModel.selectTask(task.id)
+        viewModel.updateEditReminderText("2026-09-01T09:30:00Z")
+        viewModel.saveSelectedReminder()
+
+        assertEquals(Instant.parse("2026-09-01T09:30:00Z"), viewModel.state.value.selectedTask?.reminderAt?.instant)
+        assertEquals(ReminderDeliveryState.NotificationPermissionDenied, viewModel.state.value.reminderDeliveryState)
+        assertTrue(viewModel.state.value.shouldRequestNotificationPermission)
+        assertTrue(scheduler.scheduledInstants.isEmpty())
+        assertEquals(listOf(task.id), scheduler.cancelledTaskIds)
+    }
+
+    @Test
+    fun exactAlarmUnavailableIsTypedAndUserVisibleWithoutBestEffortFallback() = runTest(dispatcher) {
+        val scheduler = RecordingReminderScheduler(scheduleResult = ReminderDeliveryState.ExactAlarmUnavailable)
+        val viewModel = openedViewModel(
+            store = FakeInboxTaskStore(),
+            coordinator = LocalReminderCoordinator(AlwaysAllowedNotifications, scheduler),
+        )
+
+        viewModel.updateDraftTitle("Exact unavailable reminder")
+        viewModel.createTask()
+        viewModel.selectTask(viewModel.state.value.tasks.single().id)
+        viewModel.updateEditReminderText("2026-09-01T09:30:00Z")
+        viewModel.saveSelectedReminder()
+
+        assertEquals(ReminderDeliveryState.ExactAlarmUnavailable, viewModel.state.value.reminderDeliveryState)
+        assertEquals(listOf(Instant.parse("2026-09-01T09:30:00Z")), scheduler.scheduledInstants)
+    }
+
+    @Test
+    fun invalidReminderInputDoesNotMutateStoreOrSchedule() = runTest(dispatcher) {
+        val scheduler = RecordingReminderScheduler()
+        val store = FakeInboxTaskStore()
+        val viewModel = openedViewModel(store, LocalReminderCoordinator(AlwaysAllowedNotifications, scheduler))
+
+        viewModel.updateDraftTitle("Invalid reminder")
+        viewModel.createTask()
+        viewModel.selectTask(viewModel.state.value.tasks.single().id)
+        viewModel.updateEditReminderText("not-a-time")
+        viewModel.saveSelectedReminder()
+
+        assertNull(store.tasks.single().reminderAt)
+        assertNotNull(viewModel.state.value.validationMessage)
+        assertTrue(scheduler.scheduledInstants.isEmpty())
+    }
+
+    private fun openedViewModel(
+        store: FakeInboxTaskStore,
+        coordinator: LocalReminderCoordinator? = null,
+    ): InboxViewModel = InboxViewModel(
         storeProvider = { InboxStoreOpenOutcome.Opened(store) },
         ioDispatcher = dispatcher,
+        reminderCoordinator = coordinator,
     )
 }
 
@@ -175,6 +271,18 @@ private class FakeInboxTaskStore(
         return edited
     }
 
+    override fun setReminder(task: InboxTask, reminderAt: ReminderAt): InboxTask {
+        val withReminder = task.copy(reminderAt = reminderAt)
+        replace(withReminder)
+        return withReminder
+    }
+
+    override fun removeReminder(task: InboxTask): InboxTask {
+        val withoutReminder = task.copy(reminderAt = null)
+        replace(withoutReminder)
+        return withoutReminder
+    }
+
     override fun complete(id: TaskId): InboxTask {
         val completed = requireNotNull(get(id)).copy(isCompleted = true)
         replace(completed)
@@ -197,5 +305,29 @@ private class FakeInboxTaskStore(
         val index = tasks.indexOfFirst { it.id == task.id }
         require(index >= 0)
         tasks[index] = task
+    }
+}
+
+private object AlwaysAllowedNotifications : NotificationPermissionGate {
+    override fun canPostNotifications(): Boolean = true
+}
+
+private object DeniedNotifications : NotificationPermissionGate {
+    override fun canPostNotifications(): Boolean = false
+}
+
+private class RecordingReminderScheduler(
+    private val scheduleResult: ReminderDeliveryState = ReminderDeliveryState.Scheduled,
+) : ExactReminderScheduler {
+    val scheduledInstants = mutableListOf<Instant>()
+    val cancelledTaskIds = mutableListOf<TaskId>()
+
+    override fun schedule(task: InboxTask): ReminderDeliveryState {
+        scheduledInstants += requireNotNull(task.reminderAt).instant
+        return scheduleResult
+    }
+
+    override fun cancel(task: InboxTask) {
+        cancelledTaskIds += task.id
     }
 }
