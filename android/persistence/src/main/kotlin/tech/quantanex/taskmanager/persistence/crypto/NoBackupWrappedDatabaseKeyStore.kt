@@ -3,33 +3,44 @@ package tech.quantanex.taskmanager.persistence.crypto
 import android.content.Context
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
-class NoBackupWrappedDatabaseKeyStore(
-    context: Context,
-    fileName: String = DEFAULT_FILE_NAME,
+class NoBackupWrappedDatabaseKeyStore internal constructor(
+    private val file: File,
 ) : WrappedDatabaseKeyStore {
-    private val file: File = File(File(context.noBackupFilesDir, SECRET_DIRECTORY).also { it.mkdirs() }, fileName)
+    constructor(
+        context: Context,
+        fileName: String = DEFAULT_FILE_NAME,
+    ) : this(File(File(context.noBackupFilesDir, SECRET_DIRECTORY), fileName))
 
     override fun read(): ByteArray? = synchronized(FILE_LOCK) {
         if (file.exists()) file.readBytes() else null
     }
 
-    override fun writeIfAbsent(blob: ByteArray): Boolean = synchronized(FILE_LOCK) {
-        val directory = file.parentFile ?: return@synchronized false
-        if (!directory.exists() && !directory.mkdirs() && !directory.exists()) return@synchronized false
-        if (!file.createNewFile()) return@synchronized false
+    override fun writeIfAbsent(blob: ByteArray): WrappedDatabaseKeyStoreWriteResult = synchronized(FILE_LOCK) {
+        val directory = file.parentFile ?: return@synchronized WrappedDatabaseKeyStoreWriteResult.Failed
+        if (!directory.exists() && !directory.mkdirs() && !directory.exists()) {
+            return@synchronized WrappedDatabaseKeyStoreWriteResult.Failed
+        }
+        try {
+            if (!file.createNewFile()) return@synchronized WrappedDatabaseKeyStoreWriteResult.AlreadyExists
+        } catch (_: IOException) {
+            return@synchronized WrappedDatabaseKeyStoreWriteResult.Failed
+        } catch (_: RuntimeException) {
+            return@synchronized WrappedDatabaseKeyStoreWriteResult.Failed
+        }
         try {
             FileOutputStream(file).use { output ->
                 output.write(blob)
                 output.fd.sync()
             }
-            true
+            WrappedDatabaseKeyStoreWriteResult.Written
         } catch (_: RuntimeException) {
             file.delete()
-            false
-        } catch (_: java.io.IOException) {
+            WrappedDatabaseKeyStoreWriteResult.Failed
+        } catch (_: IOException) {
             file.delete()
-            false
+            WrappedDatabaseKeyStoreWriteResult.Failed
         }
     }
 

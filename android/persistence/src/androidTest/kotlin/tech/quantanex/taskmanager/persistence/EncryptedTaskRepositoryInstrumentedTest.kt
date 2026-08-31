@@ -11,6 +11,7 @@ import tech.quantanex.taskmanager.persistence.crypto.DatabaseKeyProtector
 import tech.quantanex.taskmanager.persistence.crypto.DatabaseKeyGenerator
 import tech.quantanex.taskmanager.persistence.crypto.KeystoreCapability
 import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStore
+import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStoreWriteResult
 import java.io.File
 import java.time.Instant
 import kotlin.test.Test
@@ -107,10 +108,10 @@ class EncryptedTaskRepositoryInstrumentedTest {
     private class InMemoryWrappedDatabaseKeyStore(initial: ByteArray? = null) : WrappedDatabaseKeyStore {
         private var blob: ByteArray? = initial?.copyOf()
         override fun read(): ByteArray? = blob?.copyOf()
-        override fun writeIfAbsent(blob: ByteArray): Boolean {
-            if (this.blob != null) return false
+        override fun writeIfAbsent(blob: ByteArray): WrappedDatabaseKeyStoreWriteResult {
+            if (this.blob != null) return WrappedDatabaseKeyStoreWriteResult.AlreadyExists
             this.blob = blob.copyOf()
-            return true
+            return WrappedDatabaseKeyStoreWriteResult.Written
         }
     }
 

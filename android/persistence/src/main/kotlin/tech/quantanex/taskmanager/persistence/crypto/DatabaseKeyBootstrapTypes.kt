@@ -42,7 +42,13 @@ data class KeystoreCapability(
 
 interface WrappedDatabaseKeyStore {
     fun read(): ByteArray?
-    fun writeIfAbsent(blob: ByteArray): Boolean
+    fun writeIfAbsent(blob: ByteArray): WrappedDatabaseKeyStoreWriteResult
+}
+
+sealed interface WrappedDatabaseKeyStoreWriteResult {
+    data object Written : WrappedDatabaseKeyStoreWriteResult
+    data object AlreadyExists : WrappedDatabaseKeyStoreWriteResult
+    data object Failed : WrappedDatabaseKeyStoreWriteResult
 }
 
 interface DatabaseKeyGenerator {

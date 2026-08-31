@@ -1,5 +1,6 @@
 package tech.quantanex.taskmanager.persistence.crypto
 
+import java.io.IOException
 import java.security.SecureRandom
 
 class SecureRandomDatabaseKeyGenerator(
@@ -20,6 +21,8 @@ class DatabaseKeyBootstrapper(
             store.read()
         } catch (_: RuntimeException) {
             return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+        } catch (_: IOException) {
+            return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
         }
 
         val result = if (existing == null) createAndWrapNewKey() else unwrapExistingKey(existing)
@@ -35,18 +38,41 @@ class DatabaseKeyBootstrapper(
         val plaintext = keyGenerator.generate()
         try {
             val wrapped = protector.wrap(plaintext)
-            if (!store.writeIfAbsent(wrapped)) {
-                plaintext.fill(0)
-                return openOrCreate()
+            return when (store.writeIfAbsent(wrapped)) {
+                WrappedDatabaseKeyStoreWriteResult.Written -> {
+                    DatabaseKeyBootstrapResult.Success(DatabaseKeyMaterial(plaintext), protector.capability)
+                }
+                WrappedDatabaseKeyStoreWriteResult.AlreadyExists -> {
+                    plaintext.fill(0)
+                    unwrapExistingAfterContention()
+                }
+                WrappedDatabaseKeyStoreWriteResult.Failed -> {
+                    plaintext.fill(0)
+                    DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+                }
             }
-            return DatabaseKeyBootstrapResult.Success(DatabaseKeyMaterial(plaintext), protector.capability)
         } catch (error: DatabaseKeyProtectionException) {
             plaintext.fill(0)
             return DatabaseKeyBootstrapResult.Failure(error.error)
         } catch (_: RuntimeException) {
             plaintext.fill(0)
             return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+        } catch (_: IOException) {
+            plaintext.fill(0)
+            return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
         }
+    }
+
+    private fun unwrapExistingAfterContention(): DatabaseKeyBootstrapResult {
+        val existing = try {
+            store.read()
+        } catch (_: RuntimeException) {
+            return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+        } catch (_: IOException) {
+            return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+        } ?: return DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.KeyUnavailable)
+
+        return unwrapExistingKey(existing)
     }
 
     private fun unwrapExistingKey(blob: ByteArray): DatabaseKeyBootstrapResult = try {
