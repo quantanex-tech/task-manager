@@ -1,23 +1,56 @@
-# Android fixture-only domain foundation
+# Android local foundation
 
-This `android/` workspace currently contains only a pure Kotlin/JVM domain module at `android/domain`. It is a fixture-only technical slice for repository-boundary and local task lifecycle tests.
+This `android/` Gradle workspace contains the Android-side foundation modules for the Android-first dogfood/alpha slices:
 
-It is not an Android application, not an installable artifact, not encrypted persistence, and not a usable/live release. The in-memory repository is volatile per process/repository instance and must use only deterministic synthetic fixtures; it must not store real user task data.
+- `android/domain`: pure Kotlin/JVM repository contract, domain models, and fixture-only in-memory repository tests.
+- `android/persistence`: Android library adapter that backs the domain `TaskRepository` with Room 2.8.x and SQLCipher Community Edition, plus Android Keystore-backed local database-key bootstrap and Android backup/data-extraction exclusions.
 
-## Lightweight domain test command
+It is still not an Android app, not an installable artifact, not a UI, not reminder scheduling/notifications, not sync/accounts/networking, and not a usable/live release. Tests and fixtures must remain synthetic; do not persist real task/reminder data in this workspace until the full accepted release boundary is satisfied.
 
-From the repository root, run:
+## Local toolchain used in this worker environment
 
-```bash
-JAVA_HOME=<path-to-jdk-21> <path-to-gradle-8.10.2>/bin/gradle -p android :domain:test --no-daemon
-```
-
-In this worker environment, where Java and Gradle are not installed globally, the verified command used a local untracked toolchain under `.gradle/tools`:
+Java, Gradle, and Android SDK tools were not installed globally in the worker environment. Focused verification used ignored local tools under `.gradle/tools`:
 
 ```bash
-JAVA_HOME=$PWD/.gradle/tools/jdk-21 .gradle/tools/gradle-8.10.2/bin/gradle -p android :domain:test --no-daemon
+export JAVA_HOME=$PWD/.gradle/tools/jdk-21
+export ANDROID_HOME=$PWD/.gradle/tools/android-sdk
+export ANDROID_SDK_ROOT=$ANDROID_HOME
+export PATH=$JAVA_HOME/bin:$PWD/.gradle/tools/gradle-8.11.1/bin:$ANDROID_HOME/platform-tools:$PATH
 ```
 
-## Scope guards
+## Focused verification commands
 
-This slice intentionally does not include Android framework code, an app/UI module, Room, SQLCipher, Android Keystore, filesystem/database/preferences persistence, network/server APIs, analytics, alarm scheduling, notifications, recurrence, sync, search, accounts, cryptography, release signing, APK/AAB generation, or real user data.
+From the repository root, run the domain tests:
+
+```bash
+gradle -p android :domain:test --no-daemon
+```
+
+Run Android persistence JVM/Robolectric tests for key bootstrap and backup-rule inspection:
+
+```bash
+gradle -p android :persistence:testDebugUnitTest --no-daemon
+```
+
+Compile the SQLCipher/Room instrumentation test APKs for encrypted create/open/reopen, plaintext-absence, and migration paths:
+
+```bash
+gradle -p android :persistence:assembleDebugAndroidTest --no-daemon
+```
+
+Run instrumentation tests only when an Android device or emulator is connected:
+
+```bash
+gradle -p android :persistence:connectedDebugAndroidTest --no-daemon
+```
+
+In the current worker environment this command compiled the test APK first, then failed with `No connected devices!` because no emulator or Android device was attached.
+
+## Persistence boundaries
+
+- Domain code remains free of Room, SQLCipher, Android Keystore, and Android framework types.
+- `EncryptedTaskRepositoryFactory` opens the repository only after database key bootstrap succeeds, and maps key/cipher/database failures to typed safe results.
+- The normal bootstrap path creates a random local database key, wraps it with Android Keystore AES-GCM, and stores only wrapped key material in no-backup app-private storage.
+- Existing wrapped key material is never overwritten when unwrap fails; invalidated, unavailable, corrupt, unsupported-cipher, database-open, and setup-latency failures fail closed without plaintext fallback.
+- Room schema JSON is exported under `android/persistence/schemas`; add forward-only migrations and never edit an already-applied migration for live versions.
+- Android backup and data-extraction rules exclude the encrypted database, WAL/SHM/journal/schema/FTS sidecars, key-wrapper storage, nonce/key state placeholders, sensitive diagnostics, screenshots, and sensitive preferences.

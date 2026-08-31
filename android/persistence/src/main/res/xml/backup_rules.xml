@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="database" path="task-manager.db" />
+    <exclude domain="database" path="task-manager.db-wal" />
+    <exclude domain="database" path="task-manager.db-shm" />
+    <exclude domain="database" path="task-manager.db-journal" />
+    <exclude domain="database" path="task-manager.db.schema" />
+    <exclude domain="database" path="task-manager.db-schema" />
+    <exclude domain="database" path="task-manager.db-fts" />
+    <exclude domain="file" path="task-manager-secrets/" />
+    <exclude domain="file" path="task-manager-diagnostics/" />
+    <exclude domain="file" path="screenshots/" />
+    <exclude domain="sharedpref" path="task-manager-sensitive.xml" />
+</full-backup-content>

@@ -6,7 +6,7 @@ The repository is a monorepo for the Android app, WearOS app, backend, shared pr
 
 | Area | Path | Notes |
 | --- | --- | --- |
-| Android fixture-only domain workspace | `android/` | Current Gradle workspace for the pure Kotlin/JVM `android/domain` module. It is volatile/in-memory and not an Android app, encrypted persistence implementation or release artifact. |
+| Android local foundation workspace | `android/` | Current Gradle workspace for the pure Kotlin/JVM `android/domain` module and the Android `android/persistence` Room/SQLCipher adapter. It is not an Android app, UI, reminder scheduler, sync implementation or release artifact. |
 | Android phone app | `apps/android/` | Gradle module, debug APKs and phone-specific UI tests once created. |
 | WearOS app | `apps/wearos/` | Gradle module, watch debug APKs and wearable UX tests once created. |
 | Backend server | `server/` | Runtime services, API handlers, persistence and server tests once created. |
