@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import tech.quantanex.taskmanager.data.EncryptedInboxTaskStoreFactory
 import tech.quantanex.taskmanager.data.InboxStoreOpenOutcome
+import tech.quantanex.taskmanager.data.InboxTaskStore
+import tech.quantanex.taskmanager.domain.InboxTask
 
 class ReminderRecoveryReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -16,9 +18,10 @@ class ReminderRecoveryReceiver : BroadcastReceiver() {
                     notificationPermissionGate = AndroidNotificationPermissionGate(appContext),
                     scheduler = AndroidExactReminderScheduler(appContext),
                 )
-                store.listInbox()
-                    .filter { it.reminderAt != null }
-                    .forEach { coordinator.reconcile(it) }
+                LocalReminderRecovery(
+                    coordinator = coordinator,
+                    store = InboxReminderStateStore(store),
+                ).recover()
             }
             is InboxStoreOpenOutcome.Unavailable -> Unit
         }
@@ -31,5 +34,15 @@ class ReminderRecoveryReceiver : BroadcastReceiver() {
             Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_TIME_CHANGED,
         )
+    }
+}
+
+private class InboxReminderStateStore(
+    private val store: InboxTaskStore,
+) : ReminderStateStore {
+    override fun listReminderTasks() = store.listInbox().filter { it.reminderAt != null }
+
+    override fun persistReminderDeliveryState(task: InboxTask, state: ReminderDeliveryState) {
+        store.setReminderDeliveryState(task, state)
     }
 }

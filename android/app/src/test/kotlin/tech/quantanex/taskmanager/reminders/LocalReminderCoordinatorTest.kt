@@ -43,6 +43,36 @@ class LocalReminderCoordinatorTest {
 
         assertEquals(ReminderDeliveryState.ExactAlarmUnavailable, result)
         assertEquals(listOf(task), scheduler.scheduled)
+        assertEquals(listOf(task), scheduler.cancelled)
+    }
+
+    @Test
+    fun recoveryPersistsEveryReconciledReminderDeliveryState() {
+        val scheduler = RecordingScheduler(scheduleResult = ReminderDeliveryState.ExactAlarmUnavailable)
+        val task = fixtureTask(ReminderAt(Instant.parse("2026-09-01T09:30:00Z")))
+        val store = RecordingReminderStateStore(listOf(task))
+
+        LocalReminderRecovery(
+            coordinator = LocalReminderCoordinator(AllowedNotifications, scheduler),
+            store = store,
+        ).recover()
+
+        assertEquals(listOf(task.id to ReminderDeliveryState.ExactAlarmUnavailable), store.persistedStates)
+        assertEquals(listOf(task), scheduler.cancelled)
+    }
+
+    @Test
+    fun dueAlarmWithNoMatchingExtantReminderIsSuppressed() {
+        val dueAt = Instant.parse("2026-09-01T09:30:00Z")
+        val task = fixtureTask(ReminderAt(dueAt))
+
+        val notifications = LocalReminderAlarmDelivery().notificationsFor(
+            tasks = listOf(task),
+            alarmReminderId = OpaqueReminderIds.forTask(task) + 1,
+            dueAt = dueAt,
+        )
+
+        assertTrue(notifications.isEmpty())
     }
 
     @Test
@@ -85,6 +115,18 @@ class LocalReminderCoordinatorTest {
 
         override fun cancel(task: InboxTask) {
             cancelled += task
+        }
+    }
+
+    private class RecordingReminderStateStore(
+        private val tasks: List<InboxTask>,
+    ) : ReminderStateStore {
+        val persistedStates = mutableListOf<Pair<TaskId, ReminderDeliveryState>>()
+
+        override fun listReminderTasks(): List<InboxTask> = tasks
+
+        override fun persistReminderDeliveryState(task: InboxTask, state: ReminderDeliveryState) {
+            persistedStates += task.id to state
         }
     }
 }

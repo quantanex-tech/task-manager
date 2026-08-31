@@ -1,15 +1,10 @@
 package tech.quantanex.taskmanager.reminders
 
 import tech.quantanex.taskmanager.domain.InboxTask
+import tech.quantanex.taskmanager.domain.ReminderDeliveryStatus
 import java.time.Instant
 
-enum class ReminderDeliveryState {
-    NoReminder,
-    Scheduled,
-    NotificationPermissionDenied,
-    ExactAlarmUnavailable,
-    EncryptedStateUnavailable,
-}
+typealias ReminderDeliveryState = ReminderDeliveryStatus
 
 interface NotificationPermissionGate {
     fun canPostNotifications(): Boolean
@@ -37,8 +32,48 @@ class LocalReminderCoordinator(
             scheduler.cancel(task)
             return ReminderDeliveryState.NotificationPermissionDenied
         }
-        return scheduler.schedule(task)
+        val state = scheduler.schedule(task)
+        if (state == ReminderDeliveryState.ExactAlarmUnavailable) {
+            scheduler.cancel(task)
+        }
+        return state
     }
 
     fun cancel(task: InboxTask) = scheduler.cancel(task)
+}
+
+interface ReminderStateStore {
+    fun listReminderTasks(): List<InboxTask>
+    fun persistReminderDeliveryState(task: InboxTask, state: ReminderDeliveryState)
+}
+
+class LocalReminderRecovery(
+    private val coordinator: LocalReminderCoordinator,
+    private val store: ReminderStateStore,
+) {
+    fun recover() {
+        store.listReminderTasks().forEach { task ->
+            store.persistReminderDeliveryState(task, coordinator.reconcile(task))
+        }
+    }
+}
+
+data class ReminderNotificationRequest(
+    val task: InboxTask,
+    val dueAt: Instant,
+)
+
+class LocalReminderAlarmDelivery {
+    fun notificationsFor(
+        tasks: List<InboxTask>,
+        alarmReminderId: Int?,
+        dueAt: Instant,
+    ): List<ReminderNotificationRequest> = tasks.filter { task ->
+        val reminderAt = task.reminderAt?.instant
+        reminderAt != null &&
+            !reminderAt.isAfter(dueAt) &&
+            alarmReminderId == OpaqueReminderIds.forTask(task)
+    }.map { task ->
+        ReminderNotificationRequest(task = task, dueAt = task.reminderAt!!.instant)
+    }
 }

@@ -17,7 +17,10 @@ class AndroidExactReminderScheduler(
 ) : ExactReminderScheduler {
     override fun schedule(task: InboxTask): ReminderDeliveryState {
         val reminder = task.reminderAt ?: return ReminderDeliveryState.NoReminder
-        if (!canScheduleExactAlarms()) return ReminderDeliveryState.ExactAlarmUnavailable
+        if (!canScheduleExactAlarms()) {
+            cancel(task)
+            return ReminderDeliveryState.ExactAlarmUnavailable
+        }
         val pendingIntent = requireNotNull(pendingIntentFor(task, PendingIntent.FLAG_UPDATE_CURRENT))
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,

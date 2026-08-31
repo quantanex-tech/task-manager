@@ -13,21 +13,14 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         when (val outcome = EncryptedInboxTaskStoreFactory.open(context.applicationContext)) {
             is InboxStoreOpenOutcome.Opened -> outcome.store.use { store ->
                 val alarmReminderId = intent.data?.lastPathSegment?.toIntOrNull()
-                val dueTasks = store.listInbox().filter { task ->
-                    val reminderAt = task.reminderAt?.instant
-                    reminderAt != null &&
-                        !reminderAt.isAfter(dueAt) &&
-                        alarmReminderId == OpaqueReminderIds.forTask(task)
-                }
                 val renderer = AndroidReminderNotificationRenderer(context.applicationContext)
-                if (dueTasks.isEmpty()) {
-                    renderer.render(task = null, dueAt = dueAt)
-                } else {
-                    dueTasks.forEach { renderer.render(task = it, dueAt = it.reminderAt!!.instant) }
-                }
+                LocalReminderAlarmDelivery().notificationsFor(
+                    tasks = store.listInbox(),
+                    alarmReminderId = alarmReminderId,
+                    dueAt = dueAt,
+                ).forEach { renderer.render(task = it.task, dueAt = it.dueAt) }
             }
-            is InboxStoreOpenOutcome.Unavailable -> AndroidReminderNotificationRenderer(context.applicationContext)
-                .render(task = null, dueAt = dueAt)
+            is InboxStoreOpenOutcome.Unavailable -> Unit
         }
     }
 }

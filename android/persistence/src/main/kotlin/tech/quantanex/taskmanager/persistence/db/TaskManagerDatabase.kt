@@ -12,6 +12,6 @@ abstract class TaskManagerDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
 
     companion object {
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
     }
 }

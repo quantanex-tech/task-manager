@@ -131,7 +131,13 @@ class InboxViewModelTest {
     @Test
     fun editCompleteAndUndoPreserveExistingReminderValue() = runTest(dispatcher) {
         val reminder = ReminderAt(Instant.parse("2026-09-01T10:15:30Z"))
-        val task = InboxTask(TaskId("task-with-reminder"), TaskTitle("Original"), isCompleted = false, reminderAt = reminder)
+        val task = InboxTask(
+            TaskId("task-with-reminder"),
+            TaskTitle("Original"),
+            isCompleted = false,
+            reminderAt = reminder,
+            reminderDeliveryState = ReminderDeliveryState.Scheduled,
+        )
         val store = FakeInboxTaskStore(mutableListOf(task))
         val viewModel = openedViewModel(store)
 
@@ -142,6 +148,7 @@ class InboxViewModelTest {
         viewModel.undoSelectedTaskCompletion()
 
         assertEquals(reminder, store.tasks.single().reminderAt)
+        assertEquals(ReminderDeliveryState.Scheduled, store.tasks.single().reminderDeliveryState)
         assertEquals(listOf<ReminderAt?>(reminder), store.editReminderValues)
     }
 
@@ -179,8 +186,9 @@ class InboxViewModelTest {
     @Test
     fun notificationPermissionDenialDoesNotBlockReminderSaveAndRequestsPermissionContextually() = runTest(dispatcher) {
         val scheduler = RecordingReminderScheduler()
+        val store = FakeInboxTaskStore()
         val viewModel = openedViewModel(
-            store = FakeInboxTaskStore(),
+            store = store,
             coordinator = LocalReminderCoordinator(DeniedNotifications, scheduler),
         )
 
@@ -196,13 +204,19 @@ class InboxViewModelTest {
         assertTrue(viewModel.state.value.shouldRequestNotificationPermission)
         assertTrue(scheduler.scheduledInstants.isEmpty())
         assertEquals(listOf(task.id), scheduler.cancelledTaskIds)
+
+        val reopenedViewModel = openedViewModel(store)
+        reopenedViewModel.selectTask(task.id)
+
+        assertEquals(ReminderDeliveryState.NotificationPermissionDenied, reopenedViewModel.state.value.reminderDeliveryState)
     }
 
     @Test
     fun exactAlarmUnavailableIsTypedAndUserVisibleWithoutBestEffortFallback() = runTest(dispatcher) {
         val scheduler = RecordingReminderScheduler(scheduleResult = ReminderDeliveryState.ExactAlarmUnavailable)
+        val store = FakeInboxTaskStore()
         val viewModel = openedViewModel(
-            store = FakeInboxTaskStore(),
+            store = store,
             coordinator = LocalReminderCoordinator(AlwaysAllowedNotifications, scheduler),
         )
 
@@ -214,6 +228,12 @@ class InboxViewModelTest {
 
         assertEquals(ReminderDeliveryState.ExactAlarmUnavailable, viewModel.state.value.reminderDeliveryState)
         assertEquals(listOf(Instant.parse("2026-09-01T09:30:00Z")), scheduler.scheduledInstants)
+        assertEquals(listOf(viewModel.state.value.selectedTask!!.id), scheduler.cancelledTaskIds)
+
+        val reopenedViewModel = openedViewModel(store)
+        reopenedViewModel.selectTask(viewModel.state.value.selectedTask!!.id)
+
+        assertEquals(ReminderDeliveryState.ExactAlarmUnavailable, reopenedViewModel.state.value.reminderDeliveryState)
     }
 
     @Test
@@ -266,7 +286,8 @@ private class FakeInboxTaskStore(
 
     override fun edit(task: InboxTask, title: String): InboxTask {
         editReminderValues += task.reminderAt
-        val edited = task.copy(title = TaskTitle(title.trim()))
+        val current = requireNotNull(get(task.id))
+        val edited = current.copy(title = TaskTitle(title.trim()))
         replace(edited)
         return edited
     }
@@ -281,6 +302,12 @@ private class FakeInboxTaskStore(
         val withoutReminder = task.copy(reminderAt = null)
         replace(withoutReminder)
         return withoutReminder
+    }
+
+    override fun setReminderDeliveryState(task: InboxTask, state: ReminderDeliveryState): InboxTask {
+        val withState = task.copy(reminderDeliveryState = state)
+        replace(withState)
+        return withState
     }
 
     override fun complete(id: TaskId): InboxTask {

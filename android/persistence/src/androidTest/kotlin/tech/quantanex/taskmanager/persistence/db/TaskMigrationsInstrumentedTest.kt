@@ -25,7 +25,7 @@ class TaskMigrationsInstrumentedTest {
     fun validatesFreshSchemaVersion() {
         val databaseName = "fresh-schema-${System.nanoTime()}.db"
         helper.createDatabase(databaseName, TaskManagerDatabase.SCHEMA_VERSION).apply {
-            execSQL("INSERT INTO inbox_tasks (id, title, is_completed, reminder_epoch_millis) VALUES ('fixture-fresh', 'Synthetic fresh fixture', 0, NULL)")
+            execSQL("INSERT INTO inbox_tasks (id, title, is_completed, reminder_epoch_millis, reminder_delivery_state) VALUES ('fixture-fresh', 'Synthetic fresh fixture', 0, NULL, 'NoReminder')")
             close()
         }
         helper.runMigrationsAndValidate(databaseName, TaskManagerDatabase.SCHEMA_VERSION, true)
@@ -42,12 +42,19 @@ class TaskMigrationsInstrumentedTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(databaseName, 2, true, TaskMigrations.MIGRATION_1_2)
-        migrated.query("SELECT title, is_completed, reminder_epoch_millis FROM inbox_tasks WHERE id = 'fixture-migrated'").use { cursor ->
+        val migrated = helper.runMigrationsAndValidate(
+            databaseName,
+            3,
+            true,
+            TaskMigrations.MIGRATION_1_2,
+            TaskMigrations.MIGRATION_2_3,
+        )
+        migrated.query("SELECT title, is_completed, reminder_epoch_millis, reminder_delivery_state FROM inbox_tasks WHERE id = 'fixture-migrated'").use { cursor ->
             cursor.moveToFirst()
             assertEquals("Synthetic migration fixture", cursor.getString(0))
             assertEquals(1, cursor.getInt(1))
             assertNull(cursor.getString(2))
+            assertEquals("EncryptedStateUnavailable", cursor.getString(3))
         }
         migrated.close()
     }

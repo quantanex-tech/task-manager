@@ -29,6 +29,7 @@ class Slice4AndroidReminderPolicyTest(unittest.TestCase):
         self.assertNotIn("putExtra", scheduler)
         self.assertIn("setExactAndAllowWhileIdle", scheduler)
         self.assertIn("canScheduleExactAlarms", scheduler)
+        self.assertIn("cancel(task)", scheduler)
         self.assertNotIn("setWindow", scheduler)
         self.assertNotIn("setAndAllowWhileIdle", scheduler)
         self.assertNotIn("setAlarmClock", scheduler)
@@ -43,7 +44,18 @@ class Slice4AndroidReminderPolicyTest(unittest.TestCase):
         self.assertIn("LocalReminderCoordinator", recovery)
         self.assertIn("EncryptedInboxTaskStoreFactory.open", alarm)
         self.assertIn("InboxStoreOpenOutcome.Unavailable", alarm)
-        self.assertIn("render(task = null", alarm)
+        self.assertNotIn("render(task = null", alarm)
+        self.assertIn("LocalReminderAlarmDelivery", alarm)
+
+    def test_delivery_state_is_encrypted_canonical_state_not_plaintext_sidecar(self):
+        task_entity = (ROOT / "android" / "persistence" / "src" / "main" / "kotlin" / "tech" / "quantanex" / "taskmanager" / "persistence" / "db" / "TaskEntity.kt").read_text(encoding="utf-8")
+        migrations = (ROOT / "android" / "persistence" / "src" / "main" / "kotlin" / "tech" / "quantanex" / "taskmanager" / "persistence" / "db" / "TaskMigrations.kt").read_text(encoding="utf-8")
+        app_sources = "\n".join(path.read_text(encoding="utf-8") for path in APP_MAIN.glob("kotlin/**/*.kt"))
+
+        self.assertIn("reminder_delivery_state", task_entity)
+        self.assertIn("reminder_delivery_state", migrations)
+        self.assertNotIn("getSharedPreferences", app_sources)
+        self.assertNotIn("SharedPreferences", app_sources)
 
     def test_notification_renderer_has_generic_private_fallback_and_no_remote_egress_or_logs(self):
         renderer = read("kotlin/tech/quantanex/taskmanager/reminders/AndroidReminderNotificationRenderer.kt")

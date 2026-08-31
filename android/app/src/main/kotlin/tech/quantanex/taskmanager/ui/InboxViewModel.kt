@@ -112,7 +112,8 @@ class InboxViewModel(
         runStoreAction { activeStore ->
             val withReminder = activeStore.setReminder(current, reminder)
             val deliveryState = reminderCoordinator?.reconcile(withReminder) ?: ReminderDeliveryState.EncryptedStateUnavailable
-            refreshFrom(activeStore).withSelectedTask(withReminder).copy(
+            val persistedReminder = activeStore.setReminderDeliveryState(withReminder, deliveryState)
+            refreshFrom(activeStore).withSelectedTask(persistedReminder).copy(
                 reminderDeliveryState = deliveryState,
                 shouldRequestNotificationPermission = deliveryState == ReminderDeliveryState.NotificationPermissionDenied,
                 validationMessage = null,
@@ -143,7 +144,8 @@ class InboxViewModel(
         runStoreAction { activeStore ->
             val refreshed = activeStore.get(current.id) ?: current
             val deliveryState = reminderCoordinator?.reconcile(refreshed) ?: ReminderDeliveryState.EncryptedStateUnavailable
-            refreshFrom(activeStore).withSelectedTask(refreshed).copy(
+            val persistedReminder = activeStore.setReminderDeliveryState(refreshed, deliveryState)
+            refreshFrom(activeStore).withSelectedTask(persistedReminder).copy(
                 reminderDeliveryState = deliveryState,
                 shouldRequestNotificationPermission = false,
             )
@@ -270,7 +272,7 @@ class InboxViewModel(
     private fun deliveryStateFor(task: InboxTask): ReminderDeliveryState = when {
         task.reminderAt == null -> ReminderDeliveryState.NoReminder
         state.value.selectedTask?.id == task.id -> reminderDeliveryState
-        else -> ReminderDeliveryState.EncryptedStateUnavailable
+        else -> task.reminderDeliveryState
     }
 
     override fun onCleared() {

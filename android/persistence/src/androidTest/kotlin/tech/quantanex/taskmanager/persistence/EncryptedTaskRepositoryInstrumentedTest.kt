@@ -2,6 +2,7 @@ package tech.quantanex.taskmanager.persistence
 
 import androidx.test.core.app.ApplicationProvider
 import tech.quantanex.taskmanager.domain.ReminderAt
+import tech.quantanex.taskmanager.domain.ReminderDeliveryStatus
 import tech.quantanex.taskmanager.domain.TaskId
 import tech.quantanex.taskmanager.domain.TaskIdGenerator
 import tech.quantanex.taskmanager.persistence.crypto.DatabaseKeyBootstrapResult
@@ -48,6 +49,7 @@ class EncryptedTaskRepositoryInstrumentedTest {
         firstOpen.repository.undoCompletion(created.id)
         firstOpen.repository.removeReminder(created.id)
         firstOpen.repository.setReminder(created.id, initialReminder)
+        firstOpen.repository.setReminderDeliveryState(created.id, ReminderDeliveryStatus.ExactAlarmUnavailable)
         firstOpen.closeable.close()
 
         val reopened = EncryptedTaskRepositoryFactory.open(context, databaseName, ids, bootstrapper)
@@ -56,6 +58,7 @@ class EncryptedTaskRepositoryInstrumentedTest {
         assertEquals("Synthetic encrypted fixture edited", task.title.value)
         assertFalse(task.isCompleted)
         assertEquals(initialReminder, task.reminderAt)
+        assertEquals(ReminderDeliveryStatus.ExactAlarmUnavailable, task.reminderDeliveryState)
         assertEquals(listOf(task), reopened.repository.listInbox())
         reopened.repository.delete(created.id)
         assertNull(reopened.repository.get(created.id))
