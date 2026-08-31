@@ -2,9 +2,9 @@ package tech.quantanex.taskmanager.persistence
 
 import android.content.Context
 import androidx.room.Room
-import tech.quantanex.taskmanager.domain.SequentialSyntheticTaskIdGenerator
 import tech.quantanex.taskmanager.domain.TaskIdGenerator
 import tech.quantanex.taskmanager.domain.TaskRepository
+import tech.quantanex.taskmanager.domain.UuidTaskIdGenerator
 import tech.quantanex.taskmanager.persistence.crypto.AndroidKeystoreDatabaseKeyProtector
 import tech.quantanex.taskmanager.persistence.crypto.DatabaseKeyBootstrapError
 import tech.quantanex.taskmanager.persistence.crypto.DatabaseKeyBootstrapResult
@@ -21,7 +21,7 @@ object EncryptedTaskRepositoryFactory {
     fun open(
         context: Context,
         databaseName: String = DEFAULT_DATABASE_NAME,
-        idGenerator: TaskIdGenerator = SequentialSyntheticTaskIdGenerator(),
+        idGenerator: TaskIdGenerator = UuidTaskIdGenerator(),
         keyBootstrapper: DatabaseKeyBootstrapper = defaultBootstrapper(context),
     ): EncryptedTaskRepositoryOpenResult {
         val startedAt = System.nanoTime()

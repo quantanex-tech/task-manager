@@ -14,11 +14,13 @@ import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStore
 import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStoreWriteResult
 import java.io.File
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class EncryptedTaskRepositoryInstrumentedTest {
@@ -57,6 +59,42 @@ class EncryptedTaskRepositoryInstrumentedTest {
         assertEquals(listOf(task), reopened.repository.listInbox())
         reopened.repository.delete(created.id)
         assertNull(reopened.repository.get(created.id))
+        reopened.closeable.close()
+    }
+
+    @Test
+    fun encryptedStoreDefaultIdsRemainDistinctAcrossRepositoryReopen() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val databaseName = "encrypted-default-id-reopen-${System.nanoTime()}.db"
+        context.deleteDatabase(databaseName)
+        val bootstrapper = DatabaseKeyBootstrapper(
+            store = InMemoryWrappedDatabaseKeyStore(),
+            protector = XorTestProtector(),
+            keyGenerator = FixedDatabaseKeyGenerator(ByteArray(DatabaseKeyMaterial.DATABASE_KEY_BYTES) { index -> (index + 7).toByte() }),
+            elapsedMillis = { 15 },
+        )
+
+        val firstOpen = EncryptedTaskRepositoryFactory.open(
+            context = context,
+            databaseName = databaseName,
+            keyBootstrapper = bootstrapper,
+        )
+        assertIs<EncryptedTaskRepositoryOpenResult.Success>(firstOpen)
+        val firstTask = firstOpen.repository.create("Synthetic durable task one", null)
+        firstOpen.closeable.close()
+
+        val reopened = EncryptedTaskRepositoryFactory.open(
+            context = context,
+            databaseName = databaseName,
+            keyBootstrapper = bootstrapper,
+        )
+        assertIs<EncryptedTaskRepositoryOpenResult.Success>(reopened)
+        val secondTask = reopened.repository.create("Synthetic durable task two", null)
+
+        assertProductionOpaqueTaskId(firstTask.id)
+        assertProductionOpaqueTaskId(secondTask.id)
+        assertNotEquals(firstTask.id, secondTask.id)
+        assertEquals(listOf(firstTask, secondTask), reopened.repository.listInbox())
         reopened.closeable.close()
     }
 
@@ -103,6 +141,14 @@ class EncryptedTaskRepositoryInstrumentedTest {
     private class IteratorTaskIdGenerator(vararg ids: String) : TaskIdGenerator {
         private val iterator = ids.iterator()
         override fun nextId(): TaskId = TaskId(iterator.next())
+    }
+
+    private fun assertProductionOpaqueTaskId(id: TaskId) {
+        assertFalse(id.value.startsWith("synthetic-task-"), "Production default ID must not use the sequential synthetic fixture form")
+        assertFalse(id.value.startsWith("fixture-"), "Production default ID must not use deterministic fixture IDs")
+        assertEquals("task-", id.value.take("task-".length), "Production default ID must use the opaque task UUID prefix")
+        val uuid = UUID.fromString(id.value.removePrefix("task-"))
+        assertEquals("task-$uuid", id.value, "Production default ID must contain a canonical RFC-4122 UUID payload")
     }
 
     private class InMemoryWrappedDatabaseKeyStore(initial: ByteArray? = null) : WrappedDatabaseKeyStore {

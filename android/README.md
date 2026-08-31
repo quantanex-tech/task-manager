@@ -1,11 +1,12 @@
 # Android local foundation
 
-This `android/` Gradle workspace contains the Android-side foundation modules for the Android-first dogfood/alpha slices:
+This `android/` Gradle workspace contains the Android-side modules for the Android-first dogfood/alpha slices:
 
+- `android/app`: bounded Slice 3 single-activity Jetpack Compose phone application candidate for the first-launch encrypted local Inbox workflow.
 - `android/domain`: pure Kotlin/JVM repository contract, domain models, and fixture-only in-memory repository tests.
 - `android/persistence`: Android library adapter that backs the domain `TaskRepository` with Room 2.8.x and SQLCipher Community Edition, plus Android Keystore-backed local database-key bootstrap and Android backup/data-extraction exclusions.
 
-It is still not an Android app, not an installable artifact, not a UI, not reminder scheduling/notifications, not sync/accounts/networking, and not a usable/live release. Tests and fixtures must remain synthetic; do not persist real task/reminder data in this workspace until the full accepted release boundary is satisfied.
+The app candidate is not deployed, publication-ready, installable-proven on Paul's device, a reminder scheduler/notification surface, sync/accounts/networking, or a usable/live/final-accepted release. Tests and fixtures must remain synthetic; do not persist real task/reminder data in this workspace until the full accepted release boundary is satisfied.
 
 ## Local toolchain used in this worker environment
 
@@ -32,6 +33,12 @@ Run Android persistence JVM/Robolectric tests for key bootstrap and backup-rule 
 gradle -p android :persistence:testDebugUnitTest --no-daemon
 ```
 
+Run the Slice 3 app ViewModel/unit tests and compile the debug app plus Compose instrumentation APK:
+
+```bash
+gradle -p android :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+```
+
 Compile the SQLCipher/Room instrumentation test APKs for encrypted create/open/reopen, plaintext-absence, and migration paths:
 
 ```bash
@@ -44,7 +51,21 @@ Run instrumentation tests only when an Android device or emulator is connected:
 gradle -p android :persistence:connectedDebugAndroidTest --no-daemon
 ```
 
-In the current worker environment this command compiled the test APK first, then failed with `No connected devices!` because no emulator or Android device was attached.
+Run app Compose instrumentation tests only when an Android device or emulator is connected:
+
+```bash
+gradle -p android :app:connectedDebugAndroidTest --no-daemon
+```
+
+In the current Slice 3 worker environment, `adb devices` returned only `List of devices attached`; no emulator or Android device was attached, so connected instrumentation tests were not executed. The app and instrumentation APKs were compiled instead.
+
+## Slice 3 app boundaries
+
+- `android/app` uses `EncryptedTaskRepositoryFactory` from `android/persistence` for production task state. It does not use `InMemoryTaskRepository`, SharedPreferences, plaintext files, network services, telemetry, accounts, sync, reminder scheduling, or notification permissions.
+- First launch renders the Inbox title entry field immediately and requests focus. Draft text remains volatile UI state until encrypted storage opens and a nonblank save succeeds; the draft is cleared only after the encrypted repository reports success.
+- Repository calls run through the ViewModel on the IO dispatcher. Store/key/cipher/database failures map to a non-sensitive user-visible unavailable state; raw exceptions, task text, key material, and database details are not logged.
+- Editing a task passes through the existing `reminderAt` value; complete and undo only change completion state. Slice 4 owns reminder entry and scheduling.
+- Stable Compose test tags are present for the first-title field, add button, loading/empty/error/validation states, task list/rows, detail editor, complete/undo, and protected delete confirmation.
 
 ## Persistence boundaries
 
