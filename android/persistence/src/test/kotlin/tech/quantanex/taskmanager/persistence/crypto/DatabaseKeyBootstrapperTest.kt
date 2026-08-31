@@ -1,12 +1,21 @@
 package tech.quantanex.taskmanager.persistence.crypto
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.io.File
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class DatabaseKeyBootstrapperTest {
     @Test
     fun createsAndThenUnwrapsExistingDatabaseKeyWithoutChangingWrapper() {
@@ -99,6 +108,30 @@ class DatabaseKeyBootstrapperTest {
             DatabaseKeyBootstrapResult.Failure(DatabaseKeyBootstrapError.SetupTimedOut(2_000, 1_500)),
             result,
         )
+    }
+
+    @Test
+    fun fileBackedStoreWriteIfAbsentDoesNotReplaceExistingWrapper() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val fileName = "database-key-${UUID.randomUUID()}.wrapper"
+        val wrapperFile = File(
+            File(context.noBackupFilesDir, NoBackupWrappedDatabaseKeyStore.SECRET_DIRECTORY),
+            fileName,
+        )
+        val store = NoBackupWrappedDatabaseKeyStore(context, fileName)
+        val originalWrapper = byteArrayOf(11, 12, 13, 14)
+        val replacementWrapper = byteArrayOf(99, 98, 97, 96)
+
+        try {
+            assertTrue(store.writeIfAbsent(originalWrapper))
+            assertContentEquals(originalWrapper, store.read())
+
+            assertFalse(store.writeIfAbsent(replacementWrapper))
+
+            assertContentEquals(originalWrapper, store.read())
+        } finally {
+            wrapperFile.delete()
+        }
     }
 
     private class InMemoryWrappedDatabaseKeyStore(initial: ByteArray? = null) : WrappedDatabaseKeyStore {
