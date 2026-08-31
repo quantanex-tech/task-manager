@@ -31,7 +31,7 @@ The repository is intentionally a monorepo so every production change can be rev
 
 | Path | Purpose |
 | --- | --- |
-| `android/` | Current Android-side Gradle workspace; `android/domain` is a pure Kotlin/JVM fixture-only domain module, not an app or release artifact. |
+| `android/` | Current Android-side Gradle workspace; `android/domain` is the pure Kotlin/JVM domain module and `android/persistence` is the Room/SQLCipher Android persistence adapter. It is not an app or release artifact. |
 | `apps/android/` | Future Android phone app, Gradle module and debug/release build outputs. |
 | `apps/wearos/` | Future WearOS companion app, Gradle module and watch install artifacts. |
 | `server/` | Future backend application code and server tests. |
@@ -64,7 +64,7 @@ Before opening or updating a pull request, run the repository policy smoke check
 ./scripts/check-repository-policy.sh
 ```
 
-When changing the fixture-only Android domain module, also run the lightweight Gradle test command documented in [`android/README.md`](android/README.md).
+When changing Android domain or persistence modules, also run the focused Gradle commands documented in [`android/README.md`](android/README.md).
 
 As implementation surfaces arrive, add the relevant local commands here and to CI: formatting, linting, server tests, Android/WearOS Gradle builds, Docker Compose validation and secret scanning.
 

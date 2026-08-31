@@ -19,7 +19,7 @@ value class TaskTitle(val value: String) {
 
 data class ReminderAt internal constructor(
     val instant: Instant,
-    internal val isValid: Boolean,
+    val isValid: Boolean,
 ) {
     constructor(instant: Instant) : this(instant, true)
 
