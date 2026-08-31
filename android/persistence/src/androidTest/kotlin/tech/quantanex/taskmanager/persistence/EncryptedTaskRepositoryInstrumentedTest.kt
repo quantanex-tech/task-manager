@@ -14,6 +14,7 @@ import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStore
 import tech.quantanex.taskmanager.persistence.crypto.WrappedDatabaseKeyStoreWriteResult
 import java.io.File
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -90,6 +91,8 @@ class EncryptedTaskRepositoryInstrumentedTest {
         assertIs<EncryptedTaskRepositoryOpenResult.Success>(reopened)
         val secondTask = reopened.repository.create("Synthetic durable task two", null)
 
+        assertProductionOpaqueTaskId(firstTask.id)
+        assertProductionOpaqueTaskId(secondTask.id)
         assertNotEquals(firstTask.id, secondTask.id)
         assertEquals(listOf(firstTask, secondTask), reopened.repository.listInbox())
         reopened.closeable.close()
@@ -138,6 +141,14 @@ class EncryptedTaskRepositoryInstrumentedTest {
     private class IteratorTaskIdGenerator(vararg ids: String) : TaskIdGenerator {
         private val iterator = ids.iterator()
         override fun nextId(): TaskId = TaskId(iterator.next())
+    }
+
+    private fun assertProductionOpaqueTaskId(id: TaskId) {
+        assertFalse(id.value.startsWith("synthetic-task-"), "Production default ID must not use the sequential synthetic fixture form")
+        assertFalse(id.value.startsWith("fixture-"), "Production default ID must not use deterministic fixture IDs")
+        assertEquals("task-", id.value.take("task-".length), "Production default ID must use the opaque task UUID prefix")
+        val uuid = UUID.fromString(id.value.removePrefix("task-"))
+        assertEquals("task-$uuid", id.value, "Production default ID must contain a canonical RFC-4122 UUID payload")
     }
 
     private class InMemoryWrappedDatabaseKeyStore(initial: ByteArray? = null) : WrappedDatabaseKeyStore {
