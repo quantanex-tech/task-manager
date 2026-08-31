@@ -6,8 +6,8 @@ The repository is a monorepo for the Android app, WearOS app, backend, shared pr
 
 | Area | Path | Notes |
 | --- | --- | --- |
-| Android local foundation workspace | `android/` | Current Gradle workspace for the pure Kotlin/JVM `android/domain` module and the Android `android/persistence` Room/SQLCipher adapter. It is not an Android app, UI, reminder scheduler, sync implementation or release artifact. |
-| Android phone app | `apps/android/` | Gradle module, debug APKs and phone-specific UI tests once created. |
+| Android local workspace | `android/` | Current Gradle workspace for `android/app`, `android/domain`, and `android/persistence`. Slice 3's phone app candidate lives here with bounded Compose UI and encrypted local Inbox persistence. It is not deployed, installable-proven, a reminder scheduler, sync implementation, or final release artifact. |
+| Android phone app | `android/app/` | Single-activity Jetpack Compose phone app candidate. Production task state must open through `EncryptedTaskRepositoryFactory`; no network permissions, telemetry, plaintext fallback, sync, accounts, or reminder scheduling in Slice 3. |
 | WearOS app | `apps/wearos/` | Gradle module, watch debug APKs and wearable UX tests once created. |
 | Backend server | `server/` | Runtime services, API handlers, persistence and server tests once created. |
 | Shared contracts | `packages/protocol-test-vectors/` | Encrypted envelope schemas, sync/event fixtures and compatibility vectors. |
@@ -17,6 +17,8 @@ The repository is a monorepo for the Android app, WearOS app, backend, shared pr
 | GitHub automation | `.github/` | PR/issue templates, CODEOWNERS and workflow checks. |
 
 Directories that do not yet contain implementation files may be absent until their first Ready task creates them. Do not collapse these boundaries to make an early change smaller if it would hide deployable code, infrastructure, protocol contracts or documentation from review.
+
+The earlier reserved `apps/android/` path remains a documented monorepo boundary for any future migration or additional deployable Android surface; Slice 3 deliberately keeps the approved bounded app module at `android/app` beside the domain and persistence modules.
 
 ## Branch protection policy
 

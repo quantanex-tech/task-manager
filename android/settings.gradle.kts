@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "task-manager-android"
 include(":domain")
 include(":persistence")
+include(":app")
