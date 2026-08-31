@@ -19,6 +19,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class EncryptedTaskRepositoryInstrumentedTest {
@@ -57,6 +58,40 @@ class EncryptedTaskRepositoryInstrumentedTest {
         assertEquals(listOf(task), reopened.repository.listInbox())
         reopened.repository.delete(created.id)
         assertNull(reopened.repository.get(created.id))
+        reopened.closeable.close()
+    }
+
+    @Test
+    fun encryptedStoreDefaultIdsRemainDistinctAcrossRepositoryReopen() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val databaseName = "encrypted-default-id-reopen-${System.nanoTime()}.db"
+        context.deleteDatabase(databaseName)
+        val bootstrapper = DatabaseKeyBootstrapper(
+            store = InMemoryWrappedDatabaseKeyStore(),
+            protector = XorTestProtector(),
+            keyGenerator = FixedDatabaseKeyGenerator(ByteArray(DatabaseKeyMaterial.DATABASE_KEY_BYTES) { index -> (index + 7).toByte() }),
+            elapsedMillis = { 15 },
+        )
+
+        val firstOpen = EncryptedTaskRepositoryFactory.open(
+            context = context,
+            databaseName = databaseName,
+            keyBootstrapper = bootstrapper,
+        )
+        assertIs<EncryptedTaskRepositoryOpenResult.Success>(firstOpen)
+        val firstTask = firstOpen.repository.create("Synthetic durable task one", null)
+        firstOpen.closeable.close()
+
+        val reopened = EncryptedTaskRepositoryFactory.open(
+            context = context,
+            databaseName = databaseName,
+            keyBootstrapper = bootstrapper,
+        )
+        assertIs<EncryptedTaskRepositoryOpenResult.Success>(reopened)
+        val secondTask = reopened.repository.create("Synthetic durable task two", null)
+
+        assertNotEquals(firstTask.id, secondTask.id)
+        assertEquals(listOf(firstTask, secondTask), reopened.repository.listInbox())
         reopened.closeable.close()
     }
 

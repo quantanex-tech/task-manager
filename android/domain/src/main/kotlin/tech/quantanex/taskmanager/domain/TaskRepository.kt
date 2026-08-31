@@ -1,6 +1,7 @@
 package tech.quantanex.taskmanager.domain
 
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 @JvmInline
@@ -52,6 +53,10 @@ class SequentialSyntheticTaskIdGenerator : TaskIdGenerator {
     }
 
     override fun nextId(): TaskId = TaskId("synthetic-task-${nextValue.getAndIncrement()}")
+}
+
+class UuidTaskIdGenerator : TaskIdGenerator {
+    override fun nextId(): TaskId = TaskId("task-${UUID.randomUUID()}")
 }
 
 interface TaskRepository {
