@@ -37,7 +37,17 @@ class InMemoryTaskRepository(
         val validationError = validate(cleanTitle, reminderAt)
         if (validationError != null) return validationError
 
-        tasksById[id] = current.copy(title = TaskTitle(cleanTitle), reminderAt = reminderAt)
+        tasksById[id] = current.copy(
+            title = TaskTitle(cleanTitle),
+            reminderAt = reminderAt,
+            reminderDeliveryState = if (reminderAt == null) {
+                ReminderDeliveryStatus.NoReminder
+            } else if (current.reminderAt == reminderAt) {
+                current.reminderDeliveryState
+            } else {
+                ReminderDeliveryStatus.EncryptedStateUnavailable
+            },
+        )
         return null
     }
 
@@ -65,7 +75,12 @@ class InMemoryTaskRepository(
 
     override fun trySetReminder(id: TaskId, reminderAt: ReminderAt): TaskRepositoryError? {
         if (!reminderAt.isValid) return TaskRepositoryError.InvalidReminder
-        return updateTask(id) { it.copy(reminderAt = reminderAt) }
+        return updateTask(id) {
+            it.copy(
+                reminderAt = reminderAt,
+                reminderDeliveryState = ReminderDeliveryStatus.EncryptedStateUnavailable,
+            )
+        }
     }
 
     override fun setReminder(id: TaskId, reminderAt: ReminderAt): InboxTask {
@@ -74,10 +89,25 @@ class InMemoryTaskRepository(
         return tasksById.getValue(id)
     }
 
-    override fun tryRemoveReminder(id: TaskId): TaskRepositoryError? = updateTask(id) { it.copy(reminderAt = null) }
+    override fun tryRemoveReminder(id: TaskId): TaskRepositoryError? = updateTask(id) {
+        it.copy(reminderAt = null, reminderDeliveryState = ReminderDeliveryStatus.NoReminder)
+    }
 
     override fun removeReminder(id: TaskId): InboxTask {
         val error = tryRemoveReminder(id)
+        if (error != null) throw IllegalArgumentException(error.toString())
+        return tasksById.getValue(id)
+    }
+
+    override fun trySetReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): TaskRepositoryError? =
+        updateTask(id) { current ->
+            current.copy(
+                reminderDeliveryState = if (current.reminderAt == null) ReminderDeliveryStatus.NoReminder else state,
+            )
+        }
+
+    override fun setReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): InboxTask {
+        val error = trySetReminderDeliveryState(id, state)
         if (error != null) throw IllegalArgumentException(error.toString())
         return tasksById.getValue(id)
     }

@@ -2,6 +2,7 @@ package tech.quantanex.taskmanager.persistence
 
 import tech.quantanex.taskmanager.domain.InboxTask
 import tech.quantanex.taskmanager.domain.ReminderAt
+import tech.quantanex.taskmanager.domain.ReminderDeliveryStatus
 import tech.quantanex.taskmanager.domain.TaskId
 import tech.quantanex.taskmanager.domain.TaskIdGenerator
 import tech.quantanex.taskmanager.domain.TaskRepository
@@ -26,6 +27,7 @@ class RoomTaskRepository(
                 title = cleanTitle,
                 isCompleted = false,
                 reminderEpochMillis = reminderAt?.instant?.toEpochMilli(),
+                reminderDeliveryState = reminderAt.initialDeliveryState().name,
             )
         )
         return null
@@ -48,7 +50,18 @@ class RoomTaskRepository(
         val validationError = validate(cleanTitle, reminderAt)
         if (validationError != null) return validationError
 
-        taskDao.update(current.copy(title = cleanTitle, reminderEpochMillis = reminderAt?.instant?.toEpochMilli()))
+        val reminderEpochMillis = reminderAt?.instant?.toEpochMilli()
+        taskDao.update(
+            current.copy(
+                title = cleanTitle,
+                reminderEpochMillis = reminderEpochMillis,
+                reminderDeliveryState = when {
+                    reminderEpochMillis == null -> ReminderDeliveryStatus.NoReminder.name
+                    reminderEpochMillis == current.reminderEpochMillis -> current.reminderDeliveryState
+                    else -> ReminderDeliveryStatus.EncryptedStateUnavailable.name
+                },
+            )
+        )
         return null
     }
 
@@ -76,7 +89,12 @@ class RoomTaskRepository(
 
     override fun trySetReminder(id: TaskId, reminderAt: ReminderAt): TaskRepositoryError? {
         if (!reminderAt.isValid) return TaskRepositoryError.InvalidReminder
-        return updateTask(id) { it.copy(reminderEpochMillis = reminderAt.instant.toEpochMilli()) }
+        return updateTask(id) {
+            it.copy(
+                reminderEpochMillis = reminderAt.instant.toEpochMilli(),
+                reminderDeliveryState = ReminderDeliveryStatus.EncryptedStateUnavailable.name,
+            )
+        }
     }
 
     override fun setReminder(id: TaskId, reminderAt: ReminderAt): InboxTask {
@@ -85,10 +103,32 @@ class RoomTaskRepository(
         return taskDao.get(id.value)!!.toDomain()
     }
 
-    override fun tryRemoveReminder(id: TaskId): TaskRepositoryError? = updateTask(id) { it.copy(reminderEpochMillis = null) }
+    override fun tryRemoveReminder(id: TaskId): TaskRepositoryError? = updateTask(id) {
+        it.copy(
+            reminderEpochMillis = null,
+            reminderDeliveryState = ReminderDeliveryStatus.NoReminder.name,
+        )
+    }
 
     override fun removeReminder(id: TaskId): InboxTask {
         val error = tryRemoveReminder(id)
+        if (error != null) throw IllegalArgumentException(error.toString())
+        return taskDao.get(id.value)!!.toDomain()
+    }
+
+    override fun trySetReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): TaskRepositoryError? =
+        updateTask(id) { current ->
+            current.copy(
+                reminderDeliveryState = if (current.reminderEpochMillis == null) {
+                    ReminderDeliveryStatus.NoReminder.name
+                } else {
+                    state.name
+                },
+            )
+        }
+
+    override fun setReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): InboxTask {
+        val error = trySetReminderDeliveryState(id, state)
         if (error != null) throw IllegalArgumentException(error.toString())
         return taskDao.get(id.value)!!.toDomain()
     }
@@ -121,5 +161,15 @@ class RoomTaskRepository(
         title = TaskTitle(title),
         isCompleted = isCompleted,
         reminderAt = reminderEpochMillis?.let { ReminderAt(Instant.ofEpochMilli(it)) },
+        reminderDeliveryState = deliveryStateFor(reminderEpochMillis, reminderDeliveryState),
     )
+
+    private fun ReminderAt?.initialDeliveryState(): ReminderDeliveryStatus =
+        if (this == null) ReminderDeliveryStatus.NoReminder else ReminderDeliveryStatus.EncryptedStateUnavailable
+
+    private fun deliveryStateFor(reminderEpochMillis: Long?, persisted: String): ReminderDeliveryStatus {
+        if (reminderEpochMillis == null) return ReminderDeliveryStatus.NoReminder
+        return ReminderDeliveryStatus.entries.firstOrNull { it.name == persisted }
+            ?: ReminderDeliveryStatus.EncryptedStateUnavailable
+    }
 }

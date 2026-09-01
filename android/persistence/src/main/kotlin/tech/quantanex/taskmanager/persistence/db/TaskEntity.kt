@@ -15,4 +15,6 @@ data class TaskEntity(
     val isCompleted: Boolean,
     @ColumnInfo(name = "reminder_epoch_millis")
     val reminderEpochMillis: Long?,
+    @ColumnInfo(name = "reminder_delivery_state")
+    val reminderDeliveryState: String,
 )

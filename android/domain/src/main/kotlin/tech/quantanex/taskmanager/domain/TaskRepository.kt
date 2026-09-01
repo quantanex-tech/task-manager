@@ -35,7 +35,20 @@ data class InboxTask(
     val title: TaskTitle,
     val isCompleted: Boolean,
     val reminderAt: ReminderAt?,
+    val reminderDeliveryState: ReminderDeliveryStatus = if (reminderAt == null) {
+        ReminderDeliveryStatus.NoReminder
+    } else {
+        ReminderDeliveryStatus.EncryptedStateUnavailable
+    },
 )
+
+enum class ReminderDeliveryStatus {
+    NoReminder,
+    Scheduled,
+    NotificationPermissionDenied,
+    ExactAlarmUnavailable,
+    EncryptedStateUnavailable,
+}
 
 sealed interface TaskRepositoryError {
     data object BlankTitle : TaskRepositoryError
@@ -87,6 +100,10 @@ interface TaskRepository {
     fun removeReminder(id: TaskId): InboxTask
 
     fun tryRemoveReminder(id: TaskId): TaskRepositoryError?
+
+    fun setReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): InboxTask
+
+    fun trySetReminderDeliveryState(id: TaskId, state: ReminderDeliveryStatus): TaskRepositoryError?
 
     fun delete(id: TaskId)
 

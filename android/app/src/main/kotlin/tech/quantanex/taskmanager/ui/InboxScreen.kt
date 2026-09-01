@@ -1,5 +1,8 @@
 package tech.quantanex.taskmanager.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,17 +38,31 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import tech.quantanex.taskmanager.domain.InboxTask
 import tech.quantanex.taskmanager.domain.TaskId
+import tech.quantanex.taskmanager.reminders.ReminderDeliveryState
 
 @Composable
 fun InboxScreen(viewModel: InboxViewModel) {
     val state by viewModel.state.collectAsState()
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        viewModel.onNotificationPermissionResult()
+    }
+    LaunchedEffect(state.shouldRequestNotificationPermission) {
+        if (state.shouldRequestNotificationPermission) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     InboxContent(
         state = state,
         onDraftChange = viewModel::updateDraftTitle,
         onCreate = viewModel::createTask,
         onSelect = viewModel::selectTask,
         onEditChange = viewModel::updateEditTitle,
+        onReminderChange = viewModel::updateEditReminderText,
         onSaveEdit = viewModel::saveSelectedTask,
+        onSaveReminder = viewModel::saveSelectedReminder,
+        onRemoveReminder = viewModel::removeSelectedReminder,
         onComplete = viewModel::completeSelectedTask,
         onUndo = viewModel::undoSelectedTaskCompletion,
         onRequestDelete = viewModel::requestDeleteSelectedTask,
@@ -62,7 +79,10 @@ fun InboxContent(
     onCreate: () -> Unit,
     onSelect: (TaskId) -> Unit,
     onEditChange: (String) -> Unit,
+    onReminderChange: (String) -> Unit,
     onSaveEdit: () -> Unit,
+    onSaveReminder: () -> Unit,
+    onRemoveReminder: () -> Unit,
     onComplete: () -> Unit,
     onUndo: () -> Unit,
     onRequestDelete: () -> Unit,
@@ -146,7 +166,10 @@ fun InboxContent(
             SelectedTaskEditor(
                 state = state,
                 onEditChange = onEditChange,
+                onReminderChange = onReminderChange,
                 onSaveEdit = onSaveEdit,
+                onSaveReminder = onSaveReminder,
+                onRemoveReminder = onRemoveReminder,
                 onComplete = onComplete,
                 onUndo = onUndo,
                 onRequestDelete = onRequestDelete,
@@ -189,6 +212,12 @@ private fun InboxTaskList(
                     text = task.title.value,
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                 )
+                task.reminderAt?.let {
+                    Text(
+                        text = "Reminder ${it.instant}",
+                        modifier = Modifier.testTag("task-reminder-${task.id.value}"),
+                    )
+                }
             }
         }
     }
@@ -198,7 +227,10 @@ private fun InboxTaskList(
 private fun SelectedTaskEditor(
     state: InboxUiState,
     onEditChange: (String) -> Unit,
+    onReminderChange: (String) -> Unit,
     onSaveEdit: () -> Unit,
+    onSaveReminder: () -> Unit,
+    onRemoveReminder: () -> Unit,
     onComplete: () -> Unit,
     onUndo: () -> Unit,
     onRequestDelete: () -> Unit,
@@ -238,6 +270,29 @@ private fun SelectedTaskEditor(
                 }
             }
         }
+        OutlinedTextField(
+            value = state.editReminderText,
+            onValueChange = onReminderChange,
+            label = { Text("Exact reminder time (UTC)") },
+            placeholder = { Text("2026-09-01T09:30:00Z") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Exact reminder time" }
+                .testTag("edit-reminder"),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSaveReminder, enabled = !state.isLoading, modifier = Modifier.testTag("save-reminder")) {
+                Text("Save exact reminder")
+            }
+            OutlinedButton(onClick = onRemoveReminder, enabled = !state.isLoading, modifier = Modifier.testTag("remove-reminder")) {
+                Text("Remove reminder")
+            }
+        }
+        Text(
+            text = reminderDeliveryMessage(state.reminderDeliveryState),
+            modifier = Modifier.testTag("reminder-delivery-state"),
+        )
         if (state.pendingDeleteTaskId == task.id) {
             Text(
                 text = "Delete this task? This only affects the encrypted local Inbox.",
@@ -258,4 +313,15 @@ private fun SelectedTaskEditor(
             }
         }
     }
+}
+
+private fun reminderDeliveryMessage(state: ReminderDeliveryState): String = when (state) {
+    ReminderDeliveryState.NoReminder -> "No exact reminder is set."
+    ReminderDeliveryState.Scheduled -> "Exact local reminder scheduled on this device."
+    ReminderDeliveryState.NotificationPermissionDenied ->
+        "Reminder saved, but notifications are disabled. Allow notifications for Task Manager in Android settings to receive it."
+    ReminderDeliveryState.ExactAlarmUnavailable ->
+        "Reminder saved, but Android exact alarm capability is unavailable or revoked. Enable exact alarms for Task Manager in system settings."
+    ReminderDeliveryState.EncryptedStateUnavailable ->
+        "Reminder delivery is degraded because encrypted local state or key material is unavailable."
 }

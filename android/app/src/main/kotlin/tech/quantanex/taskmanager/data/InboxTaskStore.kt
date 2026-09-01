@@ -3,6 +3,7 @@ package tech.quantanex.taskmanager.data
 import android.content.Context
 import tech.quantanex.taskmanager.domain.InboxTask
 import tech.quantanex.taskmanager.domain.ReminderAt
+import tech.quantanex.taskmanager.domain.ReminderDeliveryStatus
 import tech.quantanex.taskmanager.domain.TaskId
 import tech.quantanex.taskmanager.domain.TaskRepository
 import tech.quantanex.taskmanager.persistence.EncryptedTaskRepositoryCloseable
@@ -15,6 +16,9 @@ interface InboxTaskStore : AutoCloseable {
     fun create(title: String): InboxTask
     fun get(id: TaskId): InboxTask?
     fun edit(task: InboxTask, title: String): InboxTask
+    fun setReminder(task: InboxTask, reminderAt: ReminderAt): InboxTask
+    fun removeReminder(task: InboxTask): InboxTask
+    fun setReminderDeliveryState(task: InboxTask, state: ReminderDeliveryStatus): InboxTask
     fun complete(id: TaskId): InboxTask
     fun undoCompletion(id: TaskId): InboxTask
     fun delete(id: TaskId)
@@ -32,6 +36,15 @@ class RepositoryInboxTaskStore(
 
     override fun edit(task: InboxTask, title: String): InboxTask =
         repository.edit(task.id, title, task.reminderAt)
+
+    override fun setReminder(task: InboxTask, reminderAt: ReminderAt): InboxTask =
+        repository.edit(task.id, task.title.value, reminderAt)
+
+    override fun removeReminder(task: InboxTask): InboxTask =
+        repository.edit(task.id, task.title.value, reminderAt = null)
+
+    override fun setReminderDeliveryState(task: InboxTask, state: ReminderDeliveryStatus): InboxTask =
+        repository.setReminderDeliveryState(task.id, state)
 
     override fun complete(id: TaskId): InboxTask = repository.complete(id)
 
